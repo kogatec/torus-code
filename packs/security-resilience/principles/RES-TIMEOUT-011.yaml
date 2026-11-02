@@ -5,15 +5,15 @@ summary: HTTP・DB・キューなど外部への呼び出しには必ずタイ�
 level: default
 styles: { security_resilience: 1.0, performance: 0.5 }
 applies_when:
-  languages: [typescript, python]
+  languages: [typescript, javascript, python, rust, go, java]
   layers: [external_call]
 not_when: []
 rationale: >
   タイムアウトがないと、相手が応答しないだけで、待っている側の接続やスレッドが尽きる。
   1つの依存先の遅れが、システム全体の停止に広がる。
 checks:
-  static: [res-timeout-011-ts-fetch, res-timeout-011-py-http]
-  review: HTTP クライアント・DB 接続プール・キューの受信に、接続と読み取りのタイムアウトが設定されているか（静的検査は fetch / requests / urlopen しか見ない）
+  static: [res-timeout-011-ts-fetch, res-timeout-011-py-http, res-timeout-011-rs-http, res-timeout-011-go-http, res-timeout-011-go-server, res-timeout-011-java-http]
+  review: HTTP クライアント・DB 接続プール・キューの受信に、接続と読み取りのタイムアウトが設定されているか（静的検査が見るのは fetch・requests・reqwest・net/http・Java の HttpClient など、主な HTTP クライアントだけ）
   tests: 応答しない相手（テスト用の遅延サーバー）に対して、決めた時間内にエラーで戻ることを確かめる
 example:
   bad: "await fetch(url)"

@@ -35,3 +35,74 @@ rule:
       has: { field: left, matches: negative-name }
     - kind: function_definition
       has: { field: name, matches: negative-name }
+---
+id: sim-neg-007-rs-negative-name
+language: Rust
+severity: info
+message: 真偽値の名前が否定形（is_not_... / has_no_...）です
+note: is_enabled のような肯定形の名前にしてください。否定形だと !is_not_ready のような二重否定が生まれます。
+metadata: { principle: SIM-NEG-007 }
+utils:
+  negative-name:
+    regex: '^(is|has|can|should|was|did)_(not|no)_'
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  any:
+    - kind: let_declaration
+      has: { field: pattern, matches: negative-name }
+    - kind: function_item
+      has: { field: name, matches: negative-name }
+    - kind: parameter
+      has: { field: pattern, matches: negative-name }
+    - kind: field_declaration
+      has: { field: name, matches: negative-name }
+  not: { matches: in-test-module }
+---
+id: sim-neg-007-go-negative-name
+language: Go
+severity: info
+message: 真偽値の名前が否定形（isNot... / hasNo...）です
+note: 'isEnabled のような肯定形の名前にしてください。否定形だと !isNotReady のような二重否定が生まれます。'
+metadata: { principle: SIM-NEG-007 }
+utils:
+  negative-name:
+    regex: '^(is|has|can|should|was|did|Is|Has|Can|Should|Was|Did)(Not|No)[A-Z]'
+rule:
+  any:
+    - kind: identifier
+      matches: negative-name
+      any:
+        - inside: { kind: expression_list, inside: { kind: short_var_declaration, field: left } }
+        - inside: { kind: var_spec, field: name }
+        - inside: { kind: parameter_declaration, field: name }
+    - kind: function_declaration
+      has: { field: name, matches: negative-name }
+    - kind: method_declaration
+      has: { field: name, matches: negative-name }
+    - kind: field_declaration
+      has: { field: name, matches: negative-name }
+---
+id: sim-neg-007-java-negative-name
+language: Java
+severity: info
+message: 真偽値の名前が否定形（isNot... / hasNo...）です
+note: 'isEnabled のような肯定形の名前にしてください。否定形だと !isNotReady のような二重否定が生まれます。'
+metadata: { principle: SIM-NEG-007 }
+utils:
+  negative-name:
+    regex: '^(is|has|can|should|was|did)(Not|No)[A-Z]'
+rule:
+  any:
+    - kind: variable_declarator
+      has: { field: name, matches: negative-name }
+    - kind: method_declaration
+      has: { field: name, matches: negative-name }
+    - kind: formal_parameter
+      has: { field: name, matches: negative-name }

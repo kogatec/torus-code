@@ -15,3 +15,40 @@ valid:
 invalid:
   - r = requests.get(url)
   - body = urlopen(req).read()
+---
+id: res-timeout-011-rs-http
+valid:
+  - 'let client = reqwest::Client::builder().timeout(Duration::from_secs(10)).build()?;'
+  - |
+    use std::net::TcpStream;
+    fn f() { let c = Client::new(); }
+invalid:
+  - 'let body = reqwest::get(url).await?.text().await?;'
+  - |
+    use reqwest::Client;
+    fn f() { let c = Client::new(); }
+  - 'let client = reqwest::blocking::Client::builder().user_agent("x").build()?;'
+---
+id: res-timeout-011-go-http
+valid:
+  - 'client := &http.Client{Timeout: 10 * time.Second}'
+  - 'resp, err := client.Do(req)'
+invalid:
+  - 'resp, err := http.Get(url)'
+  - 'client := &http.Client{Transport: tr}'
+---
+id: res-timeout-011-go-server
+valid:
+  - 'srv := &http.Server{Addr: ":8080", Handler: mux, ReadHeaderTimeout: 5 * time.Second}'
+invalid:
+  - 'func main() { log.Fatal(http.ListenAndServe(":8080", mux)) }'
+  - 'srv := &http.Server{Addr: ":8080", Handler: mux}'
+---
+id: res-timeout-011-java-http
+valid:
+  - 'HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();'
+  - 'RestTemplate rest = new RestTemplate(factory);'
+invalid:
+  - 'HttpClient client = HttpClient.newHttpClient();'
+  - 'HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();'
+  - 'RestTemplate rest = new RestTemplate();'

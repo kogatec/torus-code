@@ -38,3 +38,31 @@ rule:
       - kind: import_statement
       - kind: call_expression
         has: { field: function, regex: '^require$' }
+---
+id: sec-deser-009-java-object-stream
+language: Java
+severity: error
+message: ObjectInputStream などで、任意のコードを実行しうる形式を読み込んでいます
+note: 外から来るデータは JSON などのデータ専用の形式で、型を決めた DTO に読み込んでください。どうしても必要なら ObjectInputFilter で読み込めるクラスを限定してください。
+metadata: { principle: SEC-DESER-009 }
+rule:
+  any:
+    - kind: object_creation_expression
+      has: { field: type, regex: '^(ObjectInputStream|XMLDecoder)$' }
+    - kind: method_invocation
+      has: { field: name, regex: '^enableDefaultTyping$' }
+    - kind: identifier
+      regex: '^LaissezFaireSubTypeValidator$'
+      not: { inside: { kind: import_declaration, stopBy: end } }
+---
+id: sec-deser-009-java-snakeyaml
+language: Java
+severity: warning
+message: SnakeYAML を SafeConstructor なしで使っています
+note: new Yaml(new SafeConstructor(new LoaderOptions())) のように、任意のクラスを作らないコンストラクタを指定してください（SnakeYAML 1.x の既定は安全ではありません）。
+metadata: { principle: SEC-DESER-009 }
+rule:
+  kind: object_creation_expression
+  has: { field: type, regex: '^Yaml$' }
+  not:
+    has: { field: arguments, regex: 'SafeConstructor' }

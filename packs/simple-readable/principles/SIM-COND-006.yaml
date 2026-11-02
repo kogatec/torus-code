@@ -4,13 +4,13 @@ title: 複雑な条件式には名前を付ける
 summary: 4つ以上の条件をつなぐ式は、意味のまとまりごとに名前を付けた変数か関数にする
 level: advisory
 styles: { simple_readable: 1.0 }
-applies_when: { languages: [typescript, python], layers: [any] }
+applies_when: { languages: [typescript, javascript, python, rust, go, java], layers: [any] }
 not_when: []
 rationale: >
   長い条件式は、何を判定しているのかを読み解く必要がある。
   名前を付ければ、条件の意図がそのまま読める。
 checks:
-  static: [sim-cond-006-ts-complex-condition, sim-cond-006-py-complex-condition]
+  static: [sim-cond-006-ts-complex-condition, sim-cond-006-py-complex-condition, sim-cond-006-rs-complex-condition, sim-cond-006-go-complex-condition, sim-cond-006-java-complex-condition]
   review: 同じ条件の組み合わせが複数の場所に書かれていないか
   tests: 名前を付けた条件（関数にした場合）を、境界の値で単独でテストする
 example:

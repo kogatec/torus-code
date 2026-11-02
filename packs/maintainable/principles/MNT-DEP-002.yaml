@@ -4,13 +4,13 @@ title: 依存の向きを一方向に保つ
 summary: 依存は「画面・API → 業務ロジック → データ」の一方向にし、逆向きと循環を作らない
 level: default
 styles: { maintainable: 1.0, extensibility: 1.0 }
-applies_when: { languages: [typescript, python], layers: [any] }
+applies_when: { languages: [typescript, javascript, python, rust, go, java], layers: [any] }
 not_when: []
 rationale: >
   依存が循環したり逆向きになったりすると、1か所の変更がどこまで波及するか読めなくなる。
   一方向なら、下の層は上の層を気にせずに変更できる。
 checks:
-  static: [mnt-dep-002-ts-deep-relative-import, mnt-dep-002-py-deep-relative-import]
+  static: [mnt-dep-002-ts-deep-relative-import, mnt-dep-002-py-deep-relative-import, mnt-dep-002-rs-deep-super]
   external:
     - { engine: dependency-cruiser, rule: "層の決まり（profile.yaml の layers から生成）と循環の禁止" }
     - { engine: import-linter, rule: "Python 版の層の決まりと循環の禁止" }

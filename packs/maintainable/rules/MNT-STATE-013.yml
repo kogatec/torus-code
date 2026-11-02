@@ -39,3 +39,43 @@ rule:
       - kind: program
       - kind: export_statement
         inside: { kind: program }
+---
+id: mnt-state-013-rs-static-mut
+language: Rust
+severity: warning
+message: static mut（どこからでも書き換えられる変数）を使っています
+note: 状態は構造体で持って引数で受け渡すか、共有が必要なら Mutex / RwLock・アトミック型・OnceLock を使ってください。static mut への参照は未定義動作を起こしやすく、新しい版では警告になります。
+metadata: { principle: MNT-STATE-013 }
+rule:
+  kind: static_item
+  has: { kind: mutable_specifier }
+---
+id: mnt-state-013-go-package-var
+language: Go
+severity: info
+message: パッケージの変数（書き換えられる状態）があります
+note: パッケージの変数は、そのパッケージを使うすべての場所で共有されます。構造体のフィールドや引数で受け渡せないか検討してください。
+metadata: { principle: MNT-STATE-013 }
+rule:
+  kind: var_spec
+  inside:
+    stopBy: end
+    kind: var_declaration
+    inside: { kind: source_file }
+  not:
+    any:
+      - has: { field: name, regex: '^(_|[eE]rr\w*)$' }
+      - has: { field: value, regex: '^(errors\.New|fmt\.Errorf|regexp\.MustCompile|template\.Must|flag\.\w+)\(' }
+---
+id: mnt-state-013-java-static-mutable
+language: Java
+severity: info
+message: static で final ではないフィールド（どこからでも書き換えられる状態）があります
+note: 状態はインスタンスのフィールドや引数で受け渡してください。定数なら final を付けてください。
+metadata: { principle: MNT-STATE-013 }
+rule:
+  kind: field_declaration
+  has:
+    kind: modifiers
+    regex: '\bstatic\b'
+    not: { regex: '\bfinal\b' }

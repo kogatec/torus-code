@@ -4,13 +4,13 @@ title: コメントには「なぜ」を書き、古いコードをコメント�
 summary: コメントは理由を書く。何をするかはコードと名前で表し、コメントアウトしたコードは消す
 level: advisory
 styles: { simple_readable: 1.0, maintainable: 0.7 }
-applies_when: { languages: [typescript, python], layers: [any] }
+applies_when: { languages: [typescript, javascript, python, rust, go, java], layers: [any] }
 not_when: []
 rationale: >
   コードを言い換えただけのコメントは、コードが変わると嘘になる。
   コードから読み取れない理由（制約・経緯・選ばなかった案）こそ、コメントにしか残せない。
 checks:
-  static: [sim-comment-013-ts-commented-out-code, sim-comment-013-py-commented-out-code]
+  static: [sim-comment-013-ts-commented-out-code, sim-comment-013-py-commented-out-code, sim-comment-013-rs-commented-out-code, sim-comment-013-go-commented-out-code, sim-comment-013-java-commented-out-code]
   review: コードをそのまま言い換えたコメントがないか。分かりにくい判断（回避策・性能上の理由）に理由が書かれているか
   tests: なし
 example:

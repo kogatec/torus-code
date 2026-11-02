@@ -38,3 +38,80 @@ rule:
             - kind: raise_statement
     - has: { kind: else_clause }
     - not: { has: { kind: elif_clause } }
+---
+id: sim-else-008-rs-else-after-return
+language: Rust
+severity: info
+message: return の後に else を書いています
+note: else を外し、その中身を if の後ろに書いてください。入れ子が1段浅くなります。
+metadata: { principle: SIM-ELSE-008 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  kind: if_expression
+  all:
+    - has:
+        field: consequence
+        has:
+          any:
+            - kind: expression_statement
+              has: { kind: return_expression }
+            - kind: return_expression
+    - has:
+        field: alternative
+        kind: else_clause
+        not: { has: { kind: if_expression } }
+    # else if の連なりの一部は対象外（全体で1つの分岐として読めるため）
+    - not: { inside: { kind: else_clause } }
+    - not: { matches: in-test-module }
+---
+id: sim-else-008-go-else-after-return
+language: Go
+severity: info
+message: return の後に else を書いています
+note: else を外し、その中身を if の後ろに書いてください。入れ子が1段浅くなります。
+metadata: { principle: SIM-ELSE-008 }
+rule:
+  kind: if_statement
+  all:
+    - has:
+        field: consequence
+        has:
+          kind: statement_list
+          has:
+            any:
+              - kind: return_statement
+              - kind: expression_statement
+                regex: '^panic\('
+    - has: { field: alternative, kind: block }
+    # else if の連なりの一部は対象外（全体で1つの分岐として読めるため）
+    - not: { inside: { kind: if_statement, field: alternative } }
+---
+id: sim-else-008-java-else-after-return
+language: Java
+severity: info
+message: return / throw の後に else を書いています
+note: else を外し、その中身を if の後ろに書いてください。入れ子が1段浅くなります。
+metadata: { principle: SIM-ELSE-008 }
+rule:
+  kind: if_statement
+  all:
+    - has:
+        field: consequence
+        any:
+          - kind: return_statement
+          - kind: throw_statement
+          - has: { kind: return_statement }
+          - has: { kind: throw_statement }
+    - has:
+        field: alternative
+        not: { kind: if_statement }
+    # else if の連なりの一部は対象外（全体で1つの分岐として読めるため）
+    - not: { inside: { kind: if_statement, field: alternative } }

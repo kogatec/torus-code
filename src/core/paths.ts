@@ -6,17 +6,28 @@ import { fileURLToPath } from "node:url";
 export const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const BUNDLED_PACKS_DIR = path.join(PLUGIN_ROOT, "packs");
 
-/** 検査できる拡張子と、ast-grep の言語名 */
-export const LANGUAGE_BY_EXT: Record<string, "typescript" | "python"> = {
+/** 検査できる言語（原則の applies_when.languages に書く名前） */
+export type Language = "typescript" | "javascript" | "python" | "rust" | "go" | "java";
+
+/** 検査できる拡張子と言語。JavaScript は TypeScript のルールで検査する（resolve.ts の LANGUAGE_GLOBS） */
+export const LANGUAGE_BY_EXT: Record<string, Language> = {
   ".ts": "typescript",
   ".mts": "typescript",
   ".cts": "typescript",
   ".tsx": "typescript",
+  ".js": "javascript",
+  ".mjs": "javascript",
+  ".cjs": "javascript",
+  ".jsx": "javascript",
   ".py": "python",
   ".pyi": "python",
+  ".rs": "rust",
+  ".go": "go",
+  ".java": "java",
 };
 
-export function languageOf(file: string): "typescript" | "python" | null {
+/** 拡張子から言語を返す。検査できない言語なら null */
+export function languageOf(file: string): Language | null {
   return LANGUAGE_BY_EXT[path.extname(file).toLowerCase()] ?? null;
 }
 

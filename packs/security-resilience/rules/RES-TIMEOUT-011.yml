@@ -42,3 +42,78 @@ rule:
               - kind: keyword_argument
                 regex: '^timeout\s*='
               - kind: dictionary_splat
+---
+id: res-timeout-011-rs-http
+language: Rust
+severity: warning
+message: HTTP クライアントにタイムアウトがありません
+note: reqwest::Client::builder().timeout(Duration::from_secs(10)).build() のように、全体のタイムアウトを設定したクライアントを使ってください。reqwest は既定ではタイムアウトしません。
+metadata: { principle: RES-TIMEOUT-011 }
+utils:
+  uses-reqwest:
+    inside:
+      stopBy: end
+      kind: source_file
+      has: { stopBy: end, kind: use_declaration, regex: '\breqwest\b' }
+rule:
+  kind: call_expression
+  any:
+    - has: { field: function, regex: '^reqwest::(blocking::)?(get|Client::new)$' }
+    - all:
+        - has: { field: function, regex: '^(blocking::)?Client::new$' }
+        - matches: uses-reqwest
+    - all:
+        - has: { field: function, regex: '\.build$' }
+        - regex: '^(reqwest::)?(blocking::)?Client::builder\(\)'
+        - not: { regex: '\.timeout\(' }
+        - any:
+            - regex: '^reqwest::'
+            - matches: uses-reqwest
+---
+id: res-timeout-011-go-http
+language: Go
+severity: warning
+message: HTTP クライアントにタイムアウトがありません
+note: '&http.Client{Timeout: 10 * time.Second} のようにタイムアウトを設定したクライアントを使うか、context.WithTimeout を付けたリクエストを送ってください。http.Get などは、タイムアウトのない既定のクライアントを使います。'
+metadata: { principle: RES-TIMEOUT-011 }
+rule:
+  any:
+    - kind: call_expression
+      has: { field: function, regex: '^http\.(Get|Post|PostForm|Head)$|^http\.DefaultClient\.(Do|Get|Post|PostForm|Head)$' }
+    - kind: composite_literal
+      all:
+        - has: { field: type, regex: '^http\.Client$' }
+        - not: { has: { field: body, has: { kind: keyed_element, regex: '^Timeout\s*:' } } }
+---
+id: res-timeout-011-go-server
+language: Go
+severity: warning
+message: HTTP サーバーに読み取りのタイムアウトがありません
+note: '&http.Server{ReadHeaderTimeout: 5 * time.Second, ...} のように、タイムアウトを設定したサーバーを使ってください。http.ListenAndServe はタイムアウトなしで待ち続けます。'
+metadata: { principle: RES-TIMEOUT-011 }
+rule:
+  any:
+    - kind: call_expression
+      has: { field: function, regex: '^http\.(ListenAndServe|ListenAndServeTLS|Serve|ServeTLS)$' }
+    - kind: composite_literal
+      all:
+        - has: { field: type, regex: '^http\.Server$' }
+        - not: { has: { field: body, has: { kind: keyed_element, regex: '^(ReadHeaderTimeout|ReadTimeout)\s*:' } } }
+---
+id: res-timeout-011-java-http
+language: Java
+severity: warning
+message: HTTP クライアントにタイムアウトがありません
+note: HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)) と、リクエストごとの HttpRequest.Builder.timeout(...) を設定してください。RestTemplate や Apache HttpClient も、既定ではタイムアウトしません。
+metadata: { principle: RES-TIMEOUT-011 }
+rule:
+  any:
+    - kind: method_invocation
+      regex: '^(HttpClient\.newHttpClient|HttpClients\.(createDefault|createSystem))\(\)$'
+    - kind: method_invocation
+      all:
+        - has: { field: name, regex: '^build$' }
+        - regex: '^HttpClient\.newBuilder\(\)'
+        - not: { regex: '\.connectTimeout\(' }
+    - kind: object_creation_expression
+      regex: '^new\s+RestTemplate\s*\(\s*\)$'

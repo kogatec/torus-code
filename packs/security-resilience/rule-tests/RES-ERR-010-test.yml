@@ -53,3 +53,61 @@ invalid:
         x()
     except:
         log()
+---
+id: res-err-010-rs-empty-err-arm
+valid:
+  - |
+    match save(&order) {
+        Ok(_) => {}
+        Err(e) => tracing::error!(error = %e, "save failed"),
+    }
+  - |
+    match save(&order) {
+        Ok(v) => v,
+        Err(e) => { /* 次の同期で再送するため、ここでは無視する */ }
+    }
+invalid:
+  - |
+    match save(&order) {
+        Ok(v) => v,
+        Err(_) => {}
+    }
+  - |
+    match tx.send(msg) {
+        Ok(()) => (),
+        Err(e) => (),
+    }
+---
+id: res-err-010-go-empty-err-check
+valid:
+  - |
+    if err != nil {
+    	return fmt.Errorf("save order: %w", err)
+    }
+invalid:
+  - |
+    if err := save(order); err != nil {
+    }
+---
+id: res-err-010-go-discarded-recover
+valid:
+  - |
+    defer func() {
+    	if r := recover(); r != nil {
+    		log.Printf("panic: %v", r)
+    	}
+    }()
+invalid:
+  - 'defer func() { recover() }()'
+---
+id: res-err-010-java-empty-catch
+valid:
+  - 'try { save(order); } catch (IOException e) { log.error("save failed", e); throw new UncheckedIOException(e); }'
+invalid:
+  - 'try { save(order); } catch (IOException e) {}'
+---
+id: res-err-010-java-catch-throwable
+valid:
+  - 'try { run(); } catch (Exception e) { log.error("failed", e); }'
+invalid:
+  - 'try { run(); } catch (Throwable t) { log.error("failed", t); }'

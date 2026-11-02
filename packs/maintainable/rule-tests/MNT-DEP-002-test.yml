@@ -14,3 +14,10 @@ valid:
 invalid:
   - from ...infra import db
   - from ....infra.db import session
+---
+id: mnt-dep-002-rs-deep-super
+valid:
+  - 'use crate::domain::order::Order;'
+  - 'use super::super::model::User;'
+invalid:
+  - 'use super::super::super::infra::db::Pool;'

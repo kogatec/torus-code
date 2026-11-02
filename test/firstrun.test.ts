@@ -26,6 +26,21 @@ test("looksLikeCodeProject：git リポジトリ、プロジェクトのファ�
   assert.equal(looksLikeCodeProject(repo, home), true, "git リポジトリ");
 });
 
+test("looksLikeCodeProject：Rust・Go・Java・JavaScript のプロジェクトのファイルや浅い場所のソースでも、コードのフォルダとみなす", () => {
+  const home = tmpDir();
+  const markers = ["Cargo.toml", "go.mod", "pom.xml", "build.gradle", "build.gradle.kts"];
+  const sources = ["src/main.rs", "main.go", "App.java", "src/app.js"];
+  for (const rel of [...markers, ...sources]) {
+    const dir = tmpDir();
+    write(dir, rel, "\n");
+    assert.equal(looksLikeCodeProject(dir, home), true, rel);
+  }
+  const built = tmpDir();
+  write(built, "target/gen.rs", "\n");
+  write(built, "vendor/dep.go", "\n");
+  assert.equal(looksLikeCodeProject(built, home), false, "target・vendor の中だけ");
+});
+
 test("looksLikeCodeProject：深い場所や node_modules の中だけのファイル、ホームそのものはコードのフォルダとみなさない", () => {
   const home = tmpDir();
   const deep = tmpDir();

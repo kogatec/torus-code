@@ -25,3 +25,31 @@ valid:
 invalid:
   - from typing import List, Optional
   - from typing import Dict
+---
+id: mnt-deps-010-rs-deprecated-api
+valid:
+  - 'let s = text.trim_start();'
+  - 'use std::sync::ONCE_INIT;'
+invalid:
+  - 'let s = text.trim_left();'
+  - 'let x: Buf = unsafe { std::mem::uninitialized() };'
+  - 'static INIT: Once = ONCE_INIT;'
+---
+id: mnt-deps-010-go-deprecated-api
+valid:
+  - 'func load(path string) ([]byte, error) { return os.ReadFile(path) }'
+invalid:
+  - 'func load(path string) ([]byte, error) { return ioutil.ReadFile(path) }'
+  - 'func label(name string) string { return strings.Title(name) }'
+---
+id: mnt-deps-010-java-deprecated-api
+valid:
+  - 'Integer n = Integer.valueOf(x);'
+  - 'Foo f = Foo.class.getDeclaredConstructor().newInstance();'
+invalid:
+  - 'Integer n = new Integer(x);'
+  - 'Object o = Class.forName(name).newInstance();'
+  - |
+    class Conn {
+      protected void finalize() { close(); }
+    }

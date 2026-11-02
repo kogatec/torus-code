@@ -20,3 +20,30 @@ invalid:
   - |
     def total(items):
         return sum(i.price for i in items)
+---
+id: mnt-type-006-rs-dyn-any
+valid:
+  - 'fn handle(event: &dyn Event) {}'
+invalid:
+  - 'fn handle(event: Box<dyn Any>) {}'
+  - 'fn handle(event: &dyn std::any::Any) {}'
+---
+id: mnt-type-006-go-empty-interface
+valid:
+  - 'func Parse(input []byte) (User, error) { return User{}, nil }'
+  - 'func Map[T any](xs []T) []T { return xs }'
+  - 'func Logf(format string, args ...any) {}'
+  - 'func parse(v interface{}) {}'
+  - 'func Decode(b []byte) error { var v any; return json.Unmarshal(b, &v) }'
+invalid:
+  - 'func Parse(input interface{}) (User, error) { return User{}, nil }'
+  - 'func Load(path string) (map[string]any, error) { return nil, nil }'
+---
+id: mnt-type-006-java-raw-type
+valid:
+  - 'List<String> names = new ArrayList<>();'
+  - 'Map<String, Integer> counts = Map.of();'
+  - 'boolean ok = value instanceof List;'
+invalid:
+  - 'List names = new ArrayList();'
+  - 'Class c = obj.getClass();'

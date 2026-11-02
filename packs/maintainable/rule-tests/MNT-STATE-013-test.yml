@@ -42,3 +42,32 @@ valid:
 invalid:
   - let currentUser = null;
   - export let config = {};
+---
+id: mnt-state-013-rs-static-mut
+valid:
+  - 'static COUNTER: AtomicUsize = AtomicUsize::new(0);'
+invalid:
+  - 'static mut COUNTER: u32 = 0;'
+---
+id: mnt-state-013-go-package-var
+valid:
+  - 'var ErrNotFound = errors.New("not found")'
+  - 'var _ io.Reader = (*File)(nil)'
+  - 'var datePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)'
+  - 'func f() { var count int; _ = count }'
+invalid:
+  - 'var cache = map[string]string{}'
+  - 'var db *sql.DB'
+---
+id: mnt-state-013-java-static-mutable
+valid:
+  - |
+    class C {
+      private static final int MAX = 3;
+      private int count;
+    }
+invalid:
+  - |
+    class C {
+      private static int counter = 0;
+    }

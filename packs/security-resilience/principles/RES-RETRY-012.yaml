@@ -5,14 +5,14 @@ summary: リトライは冪等な操作だけ、上限回数・指数バック�
 level: default
 styles: { security_resilience: 1.0 }
 applies_when:
-  languages: [typescript, python]
+  languages: [typescript, javascript, python, rust, go, java]
   layers: [external_call]
 not_when: []
 rationale: >
   上限のないリトライは、相手が落ちているときに負荷をかけ続け、復旧を妨げる。
   冪等でない操作（支払いなど）を繰り返すと、二重に実行される。
 checks:
-  static: [res-retry-012-ts-unbounded-retry, res-retry-012-py-unbounded-retry]
+  static: [res-retry-012-ts-unbounded-retry, res-retry-012-py-unbounded-retry, res-retry-012-rs-unbounded-retry, res-retry-012-go-unbounded-retry, res-retry-012-java-unbounded-retry]
   review: >
     リトライする操作が冪等か（冪等キーがあるか）。
     一時的なエラー（タイムアウト・5xx・429）だけをリトライし、4xx はリトライしていないか。

@@ -5,7 +5,7 @@ summary: 外部依存ごとに、落ちたときの振る舞い（縮退・代�
 level: default
 styles: { security_resilience: 1.0 }
 applies_when:
-  languages: [typescript, python]
+  languages: [typescript, javascript, python, rust, go, java]
   layers: [service, external_call]
 not_when: []
 rationale: >

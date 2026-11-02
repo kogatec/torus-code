@@ -33,3 +33,50 @@ invalid:
   - 'cur.execute("SELECT * FROM users WHERE name = ''%s''" % name)'
   - 'q = "DELETE FROM t WHERE id = " + str(i)'
   - 'q = "SELECT * FROM t WHERE a = {}".format(a)'
+---
+id: sec-inj-002-rs-sql-format
+valid:
+  - 'let rows = sqlx::query("SELECT * FROM users WHERE id = $1").bind(id).fetch_all(&pool).await?;'
+  - 'let msg = format!("user {} not found", id);'
+invalid:
+  - 'let q = format!("SELECT * FROM users WHERE id = {}", id);'
+  - 'conn.execute(&format!("DELETE FROM sessions WHERE token = {token}"), [])?;'
+---
+id: sec-inj-002-rs-sql-concat
+valid:
+  - 'let label = "id: ".to_string() + &id;'
+  - 'let q = "SELECT * FROM users ".to_string() + "WHERE id = $1";'
+  - 'let q = String::from("SELECT * FROM users ") + "WHERE id = $1";'
+invalid:
+  - 'let q = "SELECT * FROM users WHERE name = ".to_string() + &name;'
+---
+id: sec-inj-002-go-sql-sprintf
+valid:
+  - 'rows, err := db.Query("SELECT * FROM users WHERE id = ?", id)'
+  - 'msg := fmt.Sprintf("user %d not found", id)'
+invalid:
+  - 'q := fmt.Sprintf("SELECT * FROM users WHERE id = %s", id)'
+  - 'db.Exec(fmt.Sprintf("DELETE FROM sessions WHERE token = %q", token))'
+---
+id: sec-inj-002-go-sql-concat
+valid:
+  - 'label := "id: " + id'
+  - 'q := "SELECT * FROM users " + "WHERE id = ?"'
+invalid:
+  - 'rows, err := db.Query("SELECT * FROM users WHERE name = " + name)'
+---
+id: sec-inj-002-java-sql-concat
+valid:
+  - 'PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE id = ?");'
+  - 'String label = "id: " + id;'
+  - 'String q = "SELECT * FROM users " + "WHERE id = ?";'
+invalid:
+  - 'String q = "SELECT * FROM users WHERE id = " + id;'
+  - 'stmt.executeQuery("DELETE FROM sessions WHERE token = " + token + " AND 1 = 1");'
+---
+id: sec-inj-002-java-sql-format
+valid:
+  - 'String msg = String.format("user %s not found", id);'
+invalid:
+  - 'String q = String.format("SELECT * FROM users WHERE id = %s", id);'
+  - 'String q = "UPDATE users SET name = %s WHERE id = 1".formatted(name);'

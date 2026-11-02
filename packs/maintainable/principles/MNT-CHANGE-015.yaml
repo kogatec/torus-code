@@ -4,7 +4,7 @@ title: 変更は小さく、目的ごとに分ける
 summary: 1つの変更には1つの目的だけを入れ、リファクタリングと振る舞いの変更を混ぜない
 level: default
 styles: { maintainable: 1.0 }
-applies_when: { languages: [typescript, python], layers: [any] }
+applies_when: { languages: [typescript, javascript, python, rust, go, java], layers: [any] }
 not_when: []
 rationale: >
   目的の違う変更が混ざると、レビューで見落としが増え、問題が起きたときに一部だけ戻すこともできない。

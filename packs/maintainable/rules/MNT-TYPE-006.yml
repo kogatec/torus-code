@@ -21,3 +21,50 @@ rule:
     - not: { has: { field: name, regex: '^test_' } }
     - not: { has: { field: return_type, regex: '.' } }
     - not: { inside: { kind: function_definition, stopBy: end } }
+---
+id: mnt-type-006-rs-dyn-any
+language: Rust
+severity: warning
+message: dyn Any で型を消しています
+note: 取りうる型を列挙型（enum）かトレイトで表してください。dyn Any は downcast に失敗するまで、型の誤りを検出できません。
+metadata: { principle: MNT-TYPE-006 }
+rule:
+  kind: dynamic_type
+  regex: '^dyn\s+((std|core)::any::)?Any\b'
+---
+id: mnt-type-006-go-empty-interface
+language: Go
+severity: info
+message: 公開関数の引数・戻り値に interface{} / any を使っています
+note: 具体的な型か、必要なメソッドだけを持つインターフェース、または型パラメータ（ジェネリクス）を使ってください。any は型アサーションに失敗するまで、型の誤りを検出できません。
+metadata: { principle: MNT-TYPE-006 }
+rule:
+  any:
+    - kind: interface_type
+      regex: '^interface\s*\{\s*\}$'
+    - kind: type_identifier
+      regex: '^any$'
+  all:
+    - inside:
+        stopBy: end
+        any: [ { kind: function_declaration }, { kind: method_declaration } ]
+        has: { field: name, regex: '^[A-Z]' }
+    - not: { inside: { stopBy: end, kind: block } }
+    - not: { inside: { stopBy: end, kind: variadic_parameter_declaration } }
+    - not: { inside: { stopBy: end, kind: type_parameter_list } }
+---
+id: mnt-type-006-java-raw-type
+language: Java
+severity: warning
+message: 型引数のない総称型（raw type）を使っています
+note: List<String> のように型引数を書いてください（new では new ArrayList<>() と書けます）。raw type は型の検査をその先まで無効にします。
+metadata: { principle: MNT-TYPE-006 }
+rule:
+  kind: type_identifier
+  regex: '^(List|ArrayList|LinkedList|Map|HashMap|TreeMap|LinkedHashMap|ConcurrentHashMap|Set|HashSet|TreeSet|LinkedHashSet|Collection|Iterable|Iterator|Optional|Comparator|Comparable|Queue|Deque|ArrayDeque|Stream|Future|CompletableFuture|Class)$'
+  any:
+    - inside: { kind: local_variable_declaration, field: type }
+    - inside: { kind: field_declaration, field: type }
+    - inside: { kind: formal_parameter, field: type }
+    - inside: { kind: method_declaration, field: type }
+    - inside: { kind: object_creation_expression, field: type }

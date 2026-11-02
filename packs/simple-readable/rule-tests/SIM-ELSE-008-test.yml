@@ -44,3 +44,63 @@ invalid:
             return None
         else:
             return parse(x)
+---
+id: sim-else-008-rs-else-after-return
+valid:
+  - |
+    fn f(x: Option<&str>) -> Option<Order> {
+        if x.is_none() { return None; }
+        parse(x)
+    }
+  - 'let v = if ok { 1 } else { 2 };'
+invalid:
+  - |
+    fn f(x: Option<&str>) -> Option<Order> {
+        if x.is_none() { return None; } else { return parse(x); }
+    }
+---
+id: sim-else-008-go-else-after-return
+valid:
+  - |
+    func f(err error) error {
+    	if err != nil {
+    		return err
+    	}
+    	return save()
+    }
+  - |
+    func f(n int) string {
+    	if n < 0 {
+    		return "negative"
+    	} else if n == 0 {
+    		return "zero"
+    	} else {
+    		return "positive"
+    	}
+    }
+invalid:
+  - |
+    func f(err error) error {
+    	if err != nil {
+    		return err
+    	} else {
+    		return save()
+    	}
+    }
+---
+id: sim-else-008-java-else-after-return
+valid:
+  - |
+    class C {
+      Order f(String x) {
+        if (x == null) return null;
+        return parse(x);
+      }
+    }
+invalid:
+  - |
+    class C {
+      Order f(String x) {
+        if (x == null) { return null; } else { return parse(x); }
+      }
+    }

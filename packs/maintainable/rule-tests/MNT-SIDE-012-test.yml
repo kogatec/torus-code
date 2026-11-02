@@ -25,3 +25,25 @@ invalid:
     with open("config.json") as f:
         CONFIG = json.load(f)
   - FLAGS = requests.get(FLAGS_URL, timeout=5).json()
+---
+id: mnt-side-012-go-init-io
+valid:
+  - 'func load() ([]byte, error) { return os.ReadFile("config.json") }'
+invalid:
+  - 'func init() { config, _ = os.ReadFile("config.json") }'
+  - 'var config, _ = os.ReadFile("config.json")'
+---
+id: mnt-side-012-java-static-io
+valid:
+  - |
+    class Config {
+      static String load() throws IOException { return Files.readString(Path.of("config.json")); }
+    }
+invalid:
+  - |
+    class Config {
+      static String raw;
+      static {
+        try { raw = Files.readString(Path.of("config.json")); } catch (IOException e) { throw new UncheckedIOException(e); }
+      }
+    }

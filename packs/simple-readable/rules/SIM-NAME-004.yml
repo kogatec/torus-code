@@ -23,3 +23,52 @@ rule:
     field: left
     kind: identifier
     regex: '^([a-dfghlmo-wA-Z]|tmp\d*|temp\d*|foo|bar|baz|stuff|thing\d*|data\d+|obj\d+|val\d+|res\d+|result\d+)$'
+---
+id: sim-name-004-rs-vague-name
+language: Rust
+severity: info
+message: 変数名から中身が分かりません（1文字・tmp・foo・data2 など）
+note: 何が入っているかが分かる名前にしてください。ループの添字（i, j, k）や座標（x, y）はそのままで構いません。
+metadata: { principle: SIM-NAME-004 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  kind: let_declaration
+  has:
+    field: pattern
+    kind: identifier
+    regex: '^([a-dfghlmo-wA-Z]|tmp\d*|temp\d*|foo|bar|baz|stuff|thing\d*|data\d+|obj\d+|val\d+|res\d+|result\d+)$'
+  not: { matches: in-test-module }
+---
+id: sim-name-004-go-vague-name
+language: Go
+severity: info
+message: 変数名から中身が分かりません（tmp・foo・data2 など）
+note: 何が入っているかが分かる名前にしてください（Go の慣習どおり、狭い範囲で使う1文字の名前はそのままで構いません）。
+metadata: { principle: SIM-NAME-004 }
+rule:
+  kind: identifier
+  regex: '^(tmp\d*|temp\d*|foo|bar|baz|stuff|thing\d*|data\d+|obj\d+|val\d+|res\d+|result\d+)$'
+  any:
+    - inside: { kind: expression_list, inside: { kind: short_var_declaration, field: left } }
+    - inside: { kind: var_spec, field: name }
+---
+id: sim-name-004-java-vague-name
+language: Java
+severity: info
+message: 変数名から中身が分かりません（1文字・tmp・foo・data2 など）
+note: 何が入っているかが分かる名前にしてください。ループの添字（i, j, k）や座標（x, y）はそのままで構いません。
+metadata: { principle: SIM-NAME-004 }
+rule:
+  kind: variable_declarator
+  has:
+    field: name
+    regex: '^([a-dfghlmo-wA-Z]|tmp\d*|temp\d*|foo|bar|baz|stuff|thing\d*|data\d+|obj\d+|val\d+|res\d+|result\d+)$'
+  inside: { kind: local_variable_declaration }

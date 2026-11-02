@@ -42,3 +42,47 @@ valid:
 invalid:
   - result = eval(expr)
   - exec(code)
+---
+id: sec-inj-003-rs-shell-string
+valid:
+  - 'let out = Command::new("git").arg("log").arg(&branch).output()?;'
+  - 'let out = Command::new("sh").arg("-c").arg("ls -la").output()?;'
+invalid:
+  - 'let out = Command::new("sh").arg("-c").arg(format!("git log {}", branch)).output()?;'
+  - 'let out = Command::new("bash").args(["-c", &cmd]).output()?;'
+---
+id: sec-inj-003-go-shell-string
+valid:
+  - 'out, err := exec.Command("git", "log", branch).Output()'
+  - 'out, err := exec.Command("sh", "-c", "ls -la").Output()'
+invalid:
+  - 'out, err := exec.Command("sh", "-c", "git log "+branch).Output()'
+  - 'cmd := exec.CommandContext(ctx, "bash", "-c", fmt.Sprintf("tar czf %s", name))'
+---
+id: sec-inj-003-java-runtime-exec
+valid:
+  - 'Process p = new ProcessBuilder("git", "log", branch).start();'
+  - 'Process p = Runtime.getRuntime().exec(new String[] {"git", "log", branch});'
+invalid:
+  - 'Process p = Runtime.getRuntime().exec("git log " + branch);'
+  - 'Process p = Runtime.getRuntime().exec(String.format("tar czf %s", name));'
+---
+id: sec-inj-003-java-shell
+valid:
+  - 'Process p = new ProcessBuilder("sh", "-c", "ls -la").start();'
+  - 'Process p = new ProcessBuilder("git", "log", branch).start();'
+invalid:
+  - 'Process p = new ProcessBuilder("sh", "-c", cmd).start();'
+  - 'Process p = Runtime.getRuntime().exec(new String[] {"bash", "-c", "tar czf " + name});'
+---
+id: sec-inj-003-java-script-eval
+valid:
+  - 'Expression e = parser.parseExpression("price * 2");'
+  - 'Object v = evaluator.evaluate(rule);'
+  - 'Decision d = policyEngine.evaluate(request);'
+  - 'Result r = ruleEngine.eval(order);'
+invalid:
+  - 'Object v = engine.eval(userScript);'
+  - 'Object v = new ScriptEngineManager().getEngineByName("js").eval(code);'
+  - 'Object v = new GroovyShell().evaluate(code);'
+  - 'Expression e = parser.parseExpression(input);'

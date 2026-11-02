@@ -13,3 +13,25 @@ valid:
   - DEV = "http://localhost:8000"
 invalid:
   - API_BASE = "https://api.payments-prod.internal/v1"
+---
+id: mnt-config-008-rs-hardcoded-endpoint
+valid:
+  - 'let base = std::env::var("PAYMENTS_URL")?;'
+  - 'let local = "http://localhost:8080";'
+invalid:
+  - 'let res = client.get("https://api.payments-prod.internal/v1/charge").send().await?;'
+  - 'let addr = "10.0.12.34:5432";'
+---
+id: mnt-config-008-go-hardcoded-endpoint
+valid:
+  - 'base := os.Getenv("PAYMENTS_URL")'
+  - 'local := "http://localhost:8080"'
+invalid:
+  - 'resp, err := client.Get("https://api.payments-prod.internal/v1/charge")'
+  - 'addr := "10.0.12.34:5432"'
+---
+id: mnt-config-008-java-hardcoded-endpoint
+valid:
+  - 'String base = System.getenv("PAYMENTS_URL");'
+invalid:
+  - 'URI u = URI.create("https://api.payments-prod.internal/v1/charge");'

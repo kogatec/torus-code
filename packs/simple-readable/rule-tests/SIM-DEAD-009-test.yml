@@ -38,3 +38,29 @@ invalid:
     def g():
         raise ValueError("x")
         cleanup()
+---
+id: sim-dead-009-rs-unreachable
+valid:
+  - 'fn f() -> i32 { log("parsing"); return 1; }'
+  - 'fn f() -> i32 { if x { return 1; } 2 }'
+  - |
+    fn f() -> i32 {
+        return 1; // 早めに返す
+    }
+invalid:
+  - 'fn f() -> i32 { return 1; log("parsed"); }'
+  - 'fn f() { panic!("broken"); cleanup(); }'
+---
+id: sim-dead-009-go-unreachable
+valid:
+  - |
+    func f() int {
+    	log.Print("parsing")
+    	return 1
+    }
+invalid:
+  - |
+    func f() int {
+    	return 1
+    	log.Print("parsed")
+    }

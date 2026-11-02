@@ -14,3 +14,95 @@ valid:
 invalid:
   - open(os.path.join(BASE, request.args["f"]))
   - return send_file(request.args.get("path"))
+---
+id: sec-path-004-rs-user-path
+valid:
+  - |
+    async fn download(Path(name): Path<String>) -> Vec<u8> {
+        let p = base.join(&name).canonicalize().unwrap();
+        if !p.starts_with(&base) { return Vec::new(); }
+        fs::read(p).unwrap()
+    }
+  - |
+    async fn download(Path(id): Path<u64>) -> Vec<u8> {
+        fs::read(base.join(format!("{}.pdf", id))).unwrap()
+    }
+  - |
+    async fn upload(Json(body): Json<Upload>) {
+        fs::write(dir.join(Uuid::new_v4().to_string()), &body.content).unwrap();
+    }
+invalid:
+  - |
+    async fn download(Path(name): Path<String>) -> Vec<u8> {
+        fs::read(PathBuf::from("uploads").join(&name)).unwrap()
+    }
+  - |
+    async fn show(Query(q): Query<ShowParams>) -> String {
+        std::fs::read_to_string(format!("pages/{}", q.file)).unwrap()
+    }
+---
+id: sec-path-004-go-user-path
+valid:
+  - |
+    func download(w http.ResponseWriter, r *http.Request) {
+    	name := filepath.Base(r.URL.Query().Get("name"))
+    	data, _ := os.ReadFile(filepath.Join(uploadDir, name))
+    	w.Write(data)
+    }
+  - |
+    func download(w http.ResponseWriter, r *http.Request) {
+    	name := r.URL.Query().Get("name")
+    	p := filepath.Join(uploadDir, name)
+    	if !strings.HasPrefix(p, uploadDir+string(os.PathSeparator)) {
+    		return
+    	}
+    	data, _ := os.ReadFile(p)
+    	w.Write(data)
+    }
+  - |
+    func save(w http.ResponseWriter, r *http.Request) {
+    	content := r.FormValue("content")
+    	os.WriteFile(filepath.Join(noteDir, uuid.NewString()), []byte(content), 0o644)
+    }
+invalid:
+  - |
+    func download(w http.ResponseWriter, r *http.Request) {
+    	name := r.URL.Query().Get("name")
+    	data, _ := os.ReadFile(filepath.Join(uploadDir, name))
+    	w.Write(data)
+    }
+  - 'http.ServeFile(w, r, filepath.Join(dir, r.FormValue("file")))'
+---
+id: sec-path-004-java-user-path
+valid:
+  - |
+    class C {
+      byte[] get(@PathVariable String name) throws IOException {
+        Path p = base.resolve(name).normalize();
+        if (!p.startsWith(base)) throw new ForbiddenException();
+        return Files.readAllBytes(p);
+      }
+    }
+  - 'File f = new File(dir, "report.pdf");'
+  - |
+    class UploadController {
+      String upload(@RequestParam("file") MultipartFile file) throws IOException {
+        Files.copy(file.getInputStream(), uploadDir.resolve(UUID.randomUUID() + ".png"));
+        return "ok";
+      }
+    }
+  - |
+    class ReportController {
+      byte[] get(@PathVariable Long id) throws IOException {
+        return Files.readAllBytes(Paths.get(REPORT_DIR, id + ".pdf"));
+      }
+    }
+invalid:
+  - |
+    class C {
+      byte[] get(@PathVariable String name) throws IOException {
+        return Files.readAllBytes(Paths.get(UPLOAD_DIR, name));
+      }
+    }
+  - 'File f = new File(uploadDir, request.getParameter("file"));'
+  - 'file.transferTo(new File(dir, file.getOriginalFilename()));'

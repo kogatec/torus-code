@@ -26,3 +26,54 @@ rule:
           stopBy: end
           kind: function_definition
           has: { field: name, regex: '^main$' }
+---
+id: mnt-log-011-rs-print
+language: Rust
+severity: info
+message: println! / dbg! などで記録しています
+note: レベルや文脈（リクエスト ID など）を付けられる tracing か log を使ってください。CLI の出力なら、このままで構いません。
+metadata: { principle: MNT-LOG-011 }
+rule:
+  kind: macro_invocation
+  has: { field: macro, regex: '^(println|print|eprintln|eprint|dbg)$' }
+  not:
+    inside:
+      stopBy: end
+      kind: function_item
+      has: { field: name, regex: '^main$' }
+---
+id: mnt-log-011-go-print
+language: Go
+severity: info
+message: fmt.Println や標準の log で記録しています
+note: レベルや文脈（リクエスト ID など）を付けられる構造化ロガー（log/slog など）を使ってください。CLI の出力なら、このままで構いません。
+metadata: { principle: MNT-LOG-011 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '^(fmt\.(Print|Printf|Println)|log\.(Print|Printf|Println)|print|println)$' }
+  not:
+    inside:
+      stopBy: end
+      kind: function_declaration
+      has: { field: name, regex: '^main$' }
+---
+id: mnt-log-011-java-print
+language: Java
+severity: info
+message: System.out / printStackTrace で記録しています
+note: レベルや文脈（リクエスト ID など）を付けられるロガー（SLF4J など）を使ってください。CLI の出力なら、このままで構いません。
+metadata: { principle: MNT-LOG-011 }
+rule:
+  kind: method_invocation
+  any:
+    - has: { field: object, regex: '^System\.(out|err)$' }
+    - all:
+        - has: { field: name, regex: '^printStackTrace$' }
+        - has: { field: arguments, regex: '^\(\s*\)$' }
+  not:
+    inside:
+      stopBy: end
+      kind: method_declaration
+      all:
+        - has: { field: name, regex: '^main$' }
+        - has: { kind: modifiers, regex: '\bstatic\b' }

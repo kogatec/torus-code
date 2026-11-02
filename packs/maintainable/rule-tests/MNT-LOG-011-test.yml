@@ -18,3 +18,30 @@ invalid:
   - |
     def create_order(cart):
         print("order created")
+---
+id: mnt-log-011-rs-print
+valid:
+  - 'fn main() { println!("done"); }'
+  - 'tracing::info!(order_id = %id, "charged");'
+invalid:
+  - 'fn charge(id: u64) { println!("charged {}", id); }'
+  - 'dbg!(&order);'
+---
+id: mnt-log-011-go-print
+valid:
+  - 'func main() { fmt.Println("done") }'
+  - 'func charge(id int) { slog.Info("charged", "order_id", id) }'
+invalid:
+  - 'func charge(id int) { fmt.Println("charged", id) }'
+  - 'func charge(id int) { log.Printf("charged %d", id) }'
+---
+id: mnt-log-011-java-print
+valid:
+  - 'log.info("charged {}", id);'
+  - |
+    class App {
+      public static void main(String[] args) { System.out.println("done"); }
+    }
+invalid:
+  - 'System.out.println("charged " + id);'
+  - 'e.printStackTrace();'

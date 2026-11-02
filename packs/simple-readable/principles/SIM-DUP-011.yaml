@@ -4,7 +4,7 @@ title: 同じ知識を3か所に書いたら、1か所にまとめる
 summary: 同じ判断・計算が3か所に現れたら、1つの関数や定数にまとめる
 level: default
 styles: { simple_readable: 0.8, maintainable: 1.0 }
-applies_when: { languages: [typescript, python], layers: [any] }
+applies_when: { languages: [typescript, javascript, python, rust, go, java], layers: [any] }
 not_when:
   - 見た目が似ているだけで、変わる理由が違うコード（まとめると、片方の変更がもう片方を壊す）
 rationale: >

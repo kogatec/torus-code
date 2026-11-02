@@ -10,13 +10,13 @@ export function levelLabel(level: Level): string {
 }
 
 const LAYER_PATTERNS: [string, RegExp][] = [
-  ["test", /(^|\/)(tests?|__tests__|spec)(\/|$)|\.(test|spec)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$|_test\.py$/],
+  ["test", /(^|\/)(tests?|__tests__|spec)(\/|$)|\.(test|spec)\.[cm]?[jt]sx?$|(^|\/)test_[^/]*\.py$|_test\.(py|go)$/],
   ["api_handler", /(^|\/)(routes?|handlers?|controllers?|api|endpoints?|views?)(\/|$)/],
   ["data_access", /(^|\/)(repositor(y|ies)|db|dao|models?|persistence|migrations?)(\/|$)|(repository|repo|dao|db)\.[a-z]+$/],
   ["external_call", /(^|\/)(clients?|gateways?|integrations?|adapters?|external)(\/|$)|client\.[a-z]+$/],
   ["service", /(^|\/)(services?|usecases?|application)(\/|$)/],
   ["domain", /(^|\/)(domain|entities|core)(\/|$)/],
-  ["cli_entry", /(^|\/)(cli|bin|scripts?|commands?)(\/|$)|(^|\/)(main|cli|__main__)\.[a-z]+$/],
+  ["cli_entry", /(^|\/)(cli|bin|scripts?|commands?|cmd)(\/|$)|(^|\/)(main|cli|__main__)\.[a-z]+$/],
 ];
 
 /** パスから、そのファイルが属しそうな層をすべて推測する */

@@ -3,10 +3,21 @@ import path from "node:path";
 import { git } from "./git.ts";
 import { languageOf, writeFileAtomic } from "./paths.ts";
 
-/** これがあれば TypeScript / Python のプロジェクトとみなす */
-const PROJECT_MARKERS = ["package.json", "tsconfig.json", "pyproject.toml", "setup.py", "requirements.txt"];
+/** これがあれば、検査できる言語のプロジェクトとみなす */
+const PROJECT_MARKERS = [
+  "package.json",
+  "tsconfig.json",
+  "pyproject.toml",
+  "setup.py",
+  "requirements.txt",
+  "Cargo.toml",
+  "go.mod",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+];
 /** 依存や生成物の置き場は、ソースを探すときに見ない（. で始まるものも見ない） */
-const SKIPPED_DIRS = new Set(["node_modules", "dist", "build", "venv", "__pycache__"]);
+const SKIPPED_DIRS = new Set(["node_modules", "dist", "build", "venv", "__pycache__", "target", "vendor"]);
 
 const FIRST_RUN_OFFER = [
   "[Torus Code] このプロジェクトは、まだ設計スタイルが設定されていません。このプロジェクトで聞くのは今回だけです。",
@@ -68,7 +79,7 @@ function realpathOrNull(p: string): string | null {
   }
 }
 
-/** git リポジトリか、プロジェクトのファイルか、浅い場所に TS / Python があるフォルダ。ホームとルートは除く */
+/** git リポジトリか、プロジェクトのファイルか、浅い場所に検査できる言語のソースがあるフォルダ。ホームとルートは除く */
 export function looksLikeCodeProject(dir: string, home: string): boolean {
   const real = realpathOrNull(dir);
   if (real === null || real === realpathOrNull(home) || real === path.parse(real).root) return false;

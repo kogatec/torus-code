@@ -36,3 +36,72 @@ rule:
         - kind: assert_statement
         - kind: call
           has: { field: function, regex: '(^|\.)(assert\w*|raises|warns|fail)$' }
+---
+id: mnt-test-003-rs-test-without-assertion
+language: Rust
+severity: warning
+message: 何も確かめていないテストです（assert! などがありません）
+note: 期待する結果を assert_eq! などで確かめてください。確かめないテストは、壊れても失敗しません。
+metadata: { principle: MNT-TEST-003 }
+rule:
+  kind: function_item
+  all:
+    - follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[(\w+::)?test\b'
+    - not:
+        follows:
+          stopBy: { not: { kind: attribute_item } }
+          kind: attribute_item
+          regex: '^#\[should_panic'
+    - not:
+        has:
+          field: body
+          stopBy: end
+          any:
+            - kind: macro_invocation
+              has: { field: macro, regex: '(^|::)(\w*assert\w*|panic|unreachable)$' }
+            - kind: call_expression
+              has: { field: function, regex: '(^|::|\.)(assert\w*|verify\w*|expect_err|unwrap_err)$' }
+---
+id: mnt-test-003-go-test-without-assertion
+language: Go
+severity: warning
+message: 何も確かめていないテストです（t.Error / t.Fatal などがありません）
+note: 期待する結果と比べ、違えば t.Errorf / t.Fatalf で失敗させてください。確かめないテストは、壊れても失敗しません。
+metadata: { principle: MNT-TEST-003 }
+rule:
+  kind: function_declaration
+  all:
+    - has: { field: name, regex: '^Test([A-Z_0-9]|$)' }
+    - not: { has: { field: name, regex: '^TestMain$' } }
+    - not:
+        has:
+          field: body
+          stopBy: end
+          kind: call_expression
+          any:
+            - has: { field: function, regex: '^t\.(Error|Errorf|Fatal|Fatalf|Fail|FailNow|Run)$' }
+            - has: { field: function, regex: '^(assert|require|is|qt|gomega)\.\w+$|^(Expect|Ω)$|^cmp\.Diff$' }
+            - has: { field: arguments, has: { kind: identifier, regex: '^t$' } }
+---
+id: mnt-test-003-java-test-without-assertion
+language: Java
+severity: warning
+message: 何も確かめていないテストです（assert / verify がありません）
+note: 期待する結果を assertEquals や assertThat で確かめてください。確かめないテストは、壊れても失敗しません。
+metadata: { principle: MNT-TEST-003 }
+rule:
+  kind: method_declaration
+  all:
+    - has: { kind: modifiers, has: { regex: '^@(Test|ParameterizedTest|RepeatedTest)\b' } }
+    - not: { has: { kind: modifiers, has: { regex: '^@Test\s*\(\s*expected' } } }
+    - not:
+        has:
+          field: body
+          stopBy: end
+          any:
+            - kind: method_invocation
+              has: { field: name, regex: '^(assert\w*|verify\w*|fail|expect\w*|andExpect\w*|then)$' }
+            - kind: assert_statement

@@ -39,3 +39,73 @@ rule:
         all:
           - has: { field: function, regex: '(model_validate|model_validate_json|parse_obj|validate|load|loads)$' }
           - not: { has: { field: function, regex: '^json\.' } }
+---
+id: sec-iv-001-rs-untyped-extractor
+language: Rust
+severity: error
+message: 外部入力（リクエストの本文・クエリ）を、型のない値（serde_json::Value / HashMap）で受け取っています
+note: 項目と型を定義した構造体（#[derive(Deserialize)]）で受け、範囲などの制約は validator などで確かめてから、検証済みの値だけを内側へ渡してください。
+metadata: { principle: SEC-IV-001 }
+rule:
+  kind: generic_type
+  all:
+    - has: { field: type, regex: '^(\w+::)*(Json|Query|Form)$' }
+    - has:
+        field: type_arguments
+        has:
+          nthChild: 1
+          regex: '^(serde_json::)?Value$|^(std::collections::)?(HashMap|BTreeMap)<'
+    - inside: { kind: parameter, field: type }
+---
+id: sec-iv-001-go-raw-request
+language: Go
+severity: error
+message: 外部入力（クエリ・フォーム・パスの値）を検証せずに使っています
+note: 構造体にデコードして validator などで検証するか、strconv などで型に変換してエラーを確かめてから、検証済みの値だけを内側へ渡してください。
+metadata: { principle: SEC-IV-001 }
+rule:
+  kind: call_expression
+  has:
+    field: function
+    regex: '^(r|req|request)\.(FormValue|PostFormValue|PathValue|URL\.Query|Form\.Get|PostForm\.Get)$|^(c|ctx)\.(Query|DefaultQuery|GetQuery|QueryArray|QueryMap|Param|Params|PostForm|DefaultPostForm|GetPostForm|QueryParam|QueryParams|FormValue|FormParams)$|^(mux\.Vars|chi\.URLParam)$'
+  not:
+    inside:
+      kind: argument_list
+      stopBy: end
+      inside:
+        kind: call_expression
+        has: { field: function, regex: '(^|\.)(Atoi|Parse\w*|MustParse\w*|Unquote|Validate\w*|Struct|Var|Decode)$' }
+---
+id: sec-iv-001-java-raw-request
+language: Java
+severity: error
+message: 外部入力（request.getParameter など）を検証せずに使っています
+note: 値を DTO にまとめて Bean Validation（@Valid と @NotNull・@Size など）で検証するか、型に変換して失敗を確かめてから、検証済みの値だけを内側へ渡してください。
+metadata: { principle: SEC-IV-001 }
+rule:
+  kind: method_invocation
+  all:
+    - has: { field: object, regex: '^(request|req|httpRequest|servletRequest|httpServletRequest)$' }
+    - has: { field: name, regex: '^(getParameter|getParameterValues|getParameterMap|getQueryString)$' }
+  not:
+    inside:
+      kind: argument_list
+      stopBy: end
+      inside:
+        kind: method_invocation
+        has: { field: name, regex: '^(parse\w*|valueOf|validate\w*|fromString|decode)$' }
+---
+id: sec-iv-001-java-unvalidated-body
+language: Java
+severity: error
+message: '@RequestBody / @ModelAttribute の引数を、型を定義した DTO と @Valid で検証していません'
+note: DTO に Bean Validation の制約（@NotNull・@Size など）を付け、引数に @Valid（または @Validated）を付けてください。Map や JsonNode のまま受け取らないでください。署名の検証などで生の本文が必要な場合（String・byte[]）は対象外です。
+metadata: { principle: SEC-IV-001 }
+rule:
+  kind: formal_parameter
+  all:
+    - has: { kind: modifiers, has: { regex: '^@(RequestBody|ModelAttribute)\b' } }
+    - not: { has: { field: type, regex: '^(String|byte\s*\[\s*\])$' } }
+    - any:
+        - not: { has: { kind: modifiers, has: { regex: '^@(Valid|Validated)\b' } } }
+        - has: { field: type, regex: '^(Map|HashMap|JsonNode|ObjectNode|Object)\b' }

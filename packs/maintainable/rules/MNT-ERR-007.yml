@@ -46,3 +46,80 @@ metadata: { principle: MNT-ERR-007 }
 rule:
   kind: raise_statement
   regex: '^raise\s+(Exception|BaseException)\s*\('
+---
+id: mnt-err-007-rs-string-error
+language: Rust
+severity: warning
+message: エラーの型が文字列（String / &str）になっています
+note: thiserror などで、エラーの種類ごとに列挙型（enum）を定義して返してください。呼び出し側が match で種類ごとに処理を分けられます。
+metadata: { principle: MNT-ERR-007 }
+rule:
+  kind: generic_type
+  all:
+    - has: { field: type, regex: '^(std::result::)?Result$' }
+    - has: { field: type_arguments, has: { nthChild: 2, regex: '^(String|&\s*(''static\s+)?str)$' } }
+  inside: { kind: function_item, field: return_type }
+---
+id: mnt-err-007-rs-message-compare
+language: Rust
+severity: warning
+message: エラーをメッセージの文字列で判別しています
+note: エラーの型（enum）で match するか、downcast_ref で種類を判別してください。メッセージは文言の変更で簡単に変わります。
+metadata: { principle: MNT-ERR-007 }
+rule:
+  any:
+    - kind: binary_expression
+      regex: '^(e|err|error)\.to_string\(\)\s*[!=]=|[!=]=\s*(e|err|error)\.to_string\(\)$'
+    - kind: call_expression
+      has: { field: function, regex: '^(e|err|error)\.to_string\(\)\.(contains|starts_with|ends_with)$' }
+---
+id: mnt-err-007-go-message-compare
+language: Go
+severity: warning
+message: エラーをメッセージの文字列で判別しています
+note: errors.Is（決まったエラー値）か errors.As（エラーの型）で判別してください。メッセージは文言の変更で簡単に変わります。
+metadata: { principle: MNT-ERR-007 }
+rule:
+  any:
+    - kind: binary_expression
+      regex: '\.Error\(\)\s*[!=]=|[!=]=\s*[\w.]+\.Error\(\)$'
+    - kind: call_expression
+      all:
+        - has: { field: function, regex: '^strings\.(Contains|HasPrefix|HasSuffix|EqualFold|Index)$' }
+        - has: { field: arguments, has: { nthChild: 1, regex: '\.Error\(\)$' } }
+---
+id: mnt-err-007-go-sentinel-compare
+language: Go
+severity: warning
+message: エラーを == で比べています（ラップされたエラーを判別できません）
+note: 'errors.Is(err, ErrNotFound) で判別してください。fmt.Errorf("...: %w", err) でラップされたエラーも判別できます。'
+metadata: { principle: MNT-ERR-007 }
+rule:
+  kind: binary_expression
+  regex: '^\w*[eE]rr\w*\s*[!=]=\s*(\w+\.)?Err[A-Z]\w*$'
+---
+id: mnt-err-007-java-message-compare
+language: Java
+severity: warning
+message: 例外をメッセージの文字列で判別しています
+note: catch で例外の型ごとに分けて捕まえるか、独自の例外クラスにエラーコードを持たせて判別してください。メッセージは文言の変更で簡単に変わります。
+metadata: { principle: MNT-ERR-007 }
+rule:
+  kind: method_invocation
+  all:
+    - has: { field: name, regex: '^(equals|equalsIgnoreCase|contains|startsWith|endsWith|matches)$' }
+    - any:
+        - has: { field: object, regex: '\.get(Localized)?Message\(\)$' }
+        - has: { field: arguments, has: { regex: '\.get(Localized)?Message\(\)$' } }
+---
+id: mnt-err-007-java-generic-exception
+language: Java
+severity: warning
+message: 汎用の Exception / RuntimeException を throw しています
+note: IllegalArgumentException など標準の具体的な例外か、独自の例外クラスを throw してください。呼び出し側が種類で処理を分けられます。
+metadata: { principle: MNT-ERR-007 }
+rule:
+  kind: throw_statement
+  has:
+    kind: object_creation_expression
+    has: { field: type, regex: '^(Exception|RuntimeException|Throwable|Error)$' }

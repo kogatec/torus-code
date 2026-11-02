@@ -203,7 +203,7 @@ test("styles・style・style set・status・principles", () => {
   const status = runCli(["status", "--project", root]);
   assert.equal(status.status, 0);
   assert.ok(status.stdout.includes("lock.json：問題なし"));
-  assert.ok(status.stdout.includes("security-resilience 版 0.1.2"));
+  assert.ok(status.stdout.includes("security-resilience 版 0.2.0"));
 
   const list = runCli(["principles", "--project", root]).stdout.trim().split("\n");
   assert.match(list[0], /^\[SEC-IV-001\] 必須 /);
@@ -248,7 +248,7 @@ test("update・lock", () => {
   assert.equal(runCli(["lock", "--project", root]).status, 0);
   assert.ok(runCli(["status", "--project", root]).stdout.includes("lock.json：問題なし"));
   const plan = runCli(["update", "--project", root]);
-  assert.ok(plan.stdout.includes("maintainable：0.1.2 → 0.1.2"));
+  assert.ok(plan.stdout.includes("maintainable：0.2.0 → 0.2.0"));
   assert.ok(plan.stdout.includes("torus update --yes"));
   assert.ok(runCli(["update", "--yes", "--project", root]).stdout.includes("更新しました"));
   assert.ok(runCli(["update", "--project", root]).stdout.startsWith("更新はありません"));

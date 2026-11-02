@@ -5,7 +5,7 @@ import path from "node:path";
 import { git } from "./git.ts";
 import { matchesAny, matchesGlob } from "./glob.ts";
 import type { Severity } from "./packs.ts";
-import { languageOf, PLUGIN_ROOT, relativeToRoot, type ProjectPaths } from "./paths.ts";
+import { languageOf, PLUGIN_ROOT, relativeToRoot, type Language, type ProjectPaths } from "./paths.ts";
 import type { Compiled } from "./resolve.ts";
 
 export interface Finding {
@@ -39,10 +39,21 @@ export interface CheckResult {
 }
 
 const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, hint: 3 };
-const EXCLUDE_GLOBS = ["node_modules", ".git", "dist", "build", ".venv", "venv", "__pycache__", ".torus"].map(
-  (d) => `!**/${d}/**`,
-);
+// *.min.js は圧縮して生成したもの
+const EXCLUDE_GLOBS = [
+  ...["node_modules", ".git", "dist", "build", ".venv", "venv", "__pycache__", ".torus"].map((d) => `!**/${d}/**`),
+  "!**/*.min.js",
+];
 const EXCLUDED_DIR_RE = /(^|\/)(node_modules|\.git|dist|build|\.venv|venv|__pycache__|\.torus)\//;
+const GENERATED_FILE_RE = /\.min\.js$/;
+/**
+ * ビルドの出力（Rust・Java の target）と、複製した依存（Go の vendor）。隣に目印のファイルがあるときだけ外す
+ * （同じ名前のディレクトリに置いた自前のコードは、必須の検査ごと外れないようにする）
+ */
+const BUILD_OUTPUT_MARKERS = new Map([
+  ["target", ["Cargo.toml", "pom.xml", "build.gradle", "build.gradle.kts"]],
+  ["vendor", ["go.mod"]],
+]);
 
 const ID_RE = "[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*";
 const ALLOW_RE = new RegExp(`torus-allow\\s+(${ID_RE}(?:\\s*,\\s*${ID_RE})*)(?:\\s*[:：]\\s*(.*))?`);
@@ -110,6 +121,41 @@ function compareFindings(a: Finding, b: Finding): number {
   );
 }
 
+/** relFile が、目印のファイルのあるビルドの出力・依存のディレクトリの中にあるか（cache はディレクトリごとの判定） */
+function inBuildOutput(root: string, relFile: string, cache: Map<string, boolean>): boolean {
+  const parts = relFile.split("/");
+  for (let i = 0; i < parts.length - 1; i++) {
+    const markers = BUILD_OUTPUT_MARKERS.get(parts[i]);
+    if (!markers) continue;
+    const parent = parts.slice(0, i).join("/");
+    const key = `${parent}/${parts[i]}`;
+    let hit = cache.get(key);
+    if (hit === undefined) {
+      hit = markers.some((m) => fs.existsSync(path.join(root, parent, m)));
+      cache.set(key, hit);
+    }
+    if (hit) return true;
+  }
+  return false;
+}
+
+/** プロジェクト直下のビルドの出力・依存は、ast-grep に読ませない（入れ子のものは結果から除く） */
+function buildOutputGlobs(root: string): string[] {
+  return [...BUILD_OUTPUT_MARKERS]
+    .filter(([, markers]) => markers.some((m) => fs.existsSync(path.join(root, m))))
+    .map(([dir]) => `!${dir}/**`);
+}
+
+/**
+ * 対象に合う ast-grep の設定。すべて同じ言語のファイルなら、その言語のルールだけの設定（ルールがなければ null）。
+ * ディレクトリや複数の言語が混ざるとき（kinds が空ならプロジェクト全体）は、全体の設定
+ */
+function sgconfigFor(compiled: Compiled, kinds: Set<Language | "dir">): string | null {
+  if (kinds.size !== 1) return compiled.sgconfig;
+  const [kind] = kinds;
+  return kind === "dir" ? compiled.sgconfig : (compiled.sgconfigs[kind] ?? null);
+}
+
 type AllowVerdict = { kind: "none" } | { kind: "invalid" } | { kind: "waived"; reason: string };
 
 /** その行か直前の行の torus-allow を調べる */
@@ -127,10 +173,12 @@ function allowFor(lines: string[], finding: Finding): AllowVerdict {
   return invalid ? { kind: "invalid" } : { kind: "none" };
 }
 
+/** ast-grep で検査し、除外・差分での絞り込み・torus-allow の例外を適用した結果を返す */
 export function check(paths: ProjectPaths, compiled: Compiled, opts: CheckOptions = {}): CheckResult {
   const result: CheckResult = { findings: [], waived: [], invalidAllows: [], filesScanned: 0, errors: [] };
   const root = paths.root;
   const targets: string[] = [];
+  const kinds = new Set<Language | "dir">();
   let wholeProject = true;
   if (opts.paths && opts.paths.length > 0) {
     wholeProject = false;
@@ -138,15 +186,20 @@ export function check(paths: ProjectPaths, compiled: Compiled, opts: CheckOption
       const abs = path.resolve(root, p);
       const rel = relativeToRoot(root, abs);
       if (rel === null || !fs.existsSync(abs)) continue;
-      if (fs.statSync(abs).isFile() && !languageOf(abs)) continue;
+      const kind = fs.statSync(abs).isFile() ? languageOf(abs) : "dir";
+      if (!kind) continue;
       const target = rel === "" ? "." : rel;
       if (!targets.includes(target)) targets.push(target);
+      kinds.add(kind);
     }
     if (targets.length === 0) return result;
   }
+  const sgconfig = sgconfigFor(compiled, kinds);
+  // その言語のルールがひとつもなければ（古い版のパックの .rs など）、ast-grep を動かさない
+  if (sgconfig === null) return result;
 
-  const args = ["scan", "-c", compiled.sgconfig, "--json=stream", "--include-metadata", "--inspect", "summary"];
-  for (const g of EXCLUDE_GLOBS) args.push("--globs", g);
+  const args = ["scan", "-c", sgconfig, "--json=stream", "--include-metadata", "--inspect", "summary"];
+  for (const g of [...EXCLUDE_GLOBS, ...buildOutputGlobs(root)]) args.push("--globs", g);
   args.push(...targets);
   const run = spawnSync(astGrepBin(), args, { cwd: root, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
   if (run.error) {
@@ -162,6 +215,7 @@ export function check(paths: ProjectPaths, compiled: Compiled, opts: CheckOption
 
   const ruleById = new Map(compiled.rules.map((r) => [r.id, r]));
   const profile = compiled.profile;
+  const buildOutputCache = new Map<string, boolean>();
   const found: Finding[] = [];
   for (const line of run.stdout.split("\n")) {
     if (!line.trim()) continue;
@@ -171,11 +225,13 @@ export function check(paths: ProjectPaths, compiled: Compiled, opts: CheckOption
     } catch {
       continue;
     }
+    // .tsx と JavaScript には、TypeScript のルールを複製した __tsx が当たる
     const ruleId = raw.ruleId.replace(/__tsx$/, "");
     const rule = ruleById.get(ruleId);
     if (!rule) continue;
     const file = relativeToRoot(root, path.resolve(root, raw.file));
-    if (file === null || EXCLUDED_DIR_RE.test(file + "/")) continue;
+    if (file === null || EXCLUDED_DIR_RE.test(file + "/") || GENERATED_FILE_RE.test(file)) continue;
+    if (inBuildOutput(root, file, buildOutputCache)) continue;
     const principle = raw.metadata?.principle ?? rule.principle;
     if (matchesAny(file, profile.exclude_paths) || matchesAny(file, rule.excludePaths)) continue;
     const overridden = Object.entries(profile.overrides.paths).some(

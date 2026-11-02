@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { test } from "node:test";
 import { changedLineRanges, check, diffFingerprints, type Finding } from "../src/core/checker.ts";
 import { readProfile, writeProfile } from "../src/core/profile.ts";
@@ -50,6 +52,87 @@ test("Python でも検出する", () => {
   assert.ok(f);
   assert.equal(f.file, "app/repo.py");
   assert.equal(f.line, 2);
+});
+
+// SEC-INJ-002 に違反する、TypeScript 以外の言語のコード
+const RUST_SQL = 'fn find(id: &str) -> String {\n    format!("SELECT * FROM users WHERE id = {}", id)\n}\n';
+const GO_SQL =
+  'package repo\n\nfunc find(id string) string {\n\treturn fmt.Sprintf("SELECT * FROM users WHERE id = %s", id)\n}\n';
+const JAVA_SQL = 'class Repo {\n  String find(String id) {\n    return "SELECT * FROM users WHERE id = " + id;\n  }\n}\n';
+const JS_SQL = "const find = (id) => db.query(`SELECT * FROM users WHERE id = ${id}`);\n";
+
+test("Rust・Go・Java でも検出し、必須の違反として止める", () => {
+  const { root, paths, compiled } = setupProject();
+  write(root, "src/repo.rs", RUST_SQL);
+  write(root, "repo/repo.go", GO_SQL);
+  write(root, "src/main/java/Repo.java", JAVA_SQL);
+  const found = inj(check(paths, compiled)).map((f) => ({ file: f.file, line: f.line, rule: f.ruleId, block: f.blocking }));
+  assert.deepEqual(found, [
+    { file: "repo/repo.go", line: 4, rule: "sec-inj-002-go-sql-sprintf", block: true },
+    { file: "src/main/java/Repo.java", line: 3, rule: "sec-inj-002-java-sql-concat", block: true },
+    { file: "src/repo.rs", line: 2, rule: "sec-inj-002-rs-sql-format", block: true },
+  ]);
+});
+
+test("JavaScript（.js / .jsx / .mjs / .cjs）は TypeScript のルールで検査し、ルール ID に __tsx が付かない", () => {
+  const { root, paths, compiled } = setupProject();
+  for (const ext of ["js", "jsx", "mjs", "cjs"]) write(root, `web/find.${ext}`, JS_SQL);
+  write(root, "web/view.jsx", "const View = ({ id }) => <p>{db.query(`SELECT * FROM users WHERE id = ${id}`)}</p>;\n");
+  const found = inj(check(paths, compiled));
+  assert.deepEqual(
+    found.map((f) => f.file),
+    ["web/find.cjs", "web/find.js", "web/find.jsx", "web/find.mjs", "web/view.jsx"],
+  );
+  assert.ok(found.every((f) => f.ruleId === "sec-inj-002-ts-sql-template" && f.blocking));
+});
+
+test("1つのファイルだけを指定しても、その言語のルールで検出する", () => {
+  const { root, paths, compiled } = setupProject();
+  write(root, "src/repo.rs", RUST_SQL);
+  write(root, "src/repo.go", GO_SQL);
+  write(root, "web/find.js", JS_SQL);
+  for (const file of ["src/repo.rs", "src/repo.go", "web/find.js"]) {
+    assert.deepEqual(inj(check(paths, compiled, { paths: [file] })).map((f) => f.file), [file]);
+  }
+});
+
+test("target・vendor は、隣にビルドの目印のファイルがあるときだけ外す。圧縮した .min.js は外す（指定しても）", () => {
+  const { root, paths, compiled } = setupProject();
+  write(root, "Cargo.toml", '[package]\nname = "app"\n');
+  write(root, "svc/go.mod", "module example.org/svc\n");
+  const ignored = ["target/debug/build/gen.rs", "svc/vendor/example.org/repo/repo.go", "public/lib.min.js"];
+  write(root, ignored[0], RUST_SQL);
+  write(root, ignored[1], GO_SQL);
+  write(root, ignored[2], JS_SQL);
+  // 目印のない場所では、同じ名前のディレクトリに置いた自前のコードも検査する（target の目印は go.mod ではない）
+  write(root, "src/vendor/payment.ts", SQL_VIOLATION);
+  write(root, "app/target/repo.py", 'def find(cur, uid):\n    cur.execute(f"SELECT * FROM users WHERE id = {uid}")\n');
+  write(root, "svc/target/repo.go", GO_SQL);
+  assert.deepEqual(
+    inj(check(paths, compiled)).map((f) => f.file),
+    ["app/target/repo.py", "src/vendor/payment.ts", "svc/target/repo.go"],
+  );
+  assert.equal(inj(check(paths, compiled, { paths: ignored })).length, 0);
+});
+
+test("パックが javascript を宣言していなければ（古い版のパック）、.js を検査せず、ast-grep も動かさない", () => {
+  const { root, paths } = setupProject();
+  for (const id of ["security-resilience", "maintainable"]) {
+    const file = path.join(paths.packsDir, id, "pack.yaml");
+    fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(/^languages: .*$/m, "languages: [typescript, python]"));
+  }
+  const compiled = loadCompiled(paths);
+  assert.equal(compiled.sgconfigs.javascript, undefined);
+  write(root, "web/find.js", JS_SQL);
+  write(root, "src/find.ts", SQL_VIOLATION);
+  assert.deepEqual(inj(check(paths, compiled)).map((f) => f.file), ["src/find.ts"]);
+  assert.deepEqual(check(paths, compiled, { paths: ["web/find.js"] }), {
+    findings: [],
+    waived: [],
+    invalidAllows: [],
+    filesScanned: 0,
+    errors: [],
+  });
 });
 
 test("torus-allow：理由があれば例外、直前の行でも同じ行でもよい", () => {

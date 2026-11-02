@@ -4,13 +4,13 @@ title: 使われないコードを残さない
 summary: 実行されないコード・使われない変数や import は消す
 level: default
 styles: { simple_readable: 1.0, maintainable: 0.8 }
-applies_when: { languages: [typescript, python], layers: [any] }
+applies_when: { languages: [typescript, javascript, python, rust, go, java], layers: [any] }
 not_when: []
 rationale: >
   使われないコードも、読む人はそれが使われているかを確かめなければならない。
   消しても git の履歴には残る。
 checks:
-  static: [sim-dead-009-ts-unreachable, sim-dead-009-py-unreachable]
+  static: [sim-dead-009-ts-unreachable, sim-dead-009-py-unreachable, sim-dead-009-rs-unreachable, sim-dead-009-go-unreachable]
   external:
     - { engine: tsc, rule: "noUnusedLocals / noUnusedParameters / allowUnreachableCode: false" }
     - { engine: ruff, rule: "F401（未使用の import）/ F841（未使用の変数）" }

@@ -38,3 +38,60 @@ rule:
             nthChild: 1
             kind: expression_statement
             has: { kind: string }
+---
+id: mnt-doc-014-rs-pub-without-doc
+language: Rust
+severity: info
+message: pub な関数・型に説明コメント（///）がありません
+note: 何をするか・前提条件・失敗時の振る舞い（Errors / Panics）を /// で書いてください。cargo doc とエディタで呼び出し側にも表示されます。
+metadata: { principle: MNT-DOC-014 }
+rule:
+  any: [ { kind: function_item }, { kind: struct_item }, { kind: enum_item }, { kind: trait_item } ]
+  all:
+    - has: { kind: visibility_modifier, regex: '^pub$' }
+    - not: { inside: { kind: declaration_list, inside: { any: [ { kind: impl_item }, { kind: trait_item } ] } } }
+    - not:
+        follows:
+          stopBy: { not: { kind: attribute_item } }
+          any:
+            - kind: line_comment
+              regex: '^///'
+            - kind: block_comment
+              regex: '^/\*\*'
+---
+id: mnt-doc-014-go-exported-without-doc
+language: Go
+severity: info
+message: 公開（大文字で始まる）関数・型に説明コメントがありません
+note: '「// 名前 ...」で始まるコメントを宣言の直前に書いてください（go doc とエディタで表示されます）。何をするか・前提条件・失敗時の振る舞いを書いてください。'
+metadata: { principle: MNT-DOC-014 }
+rule:
+  any:
+    - kind: function_declaration
+      all:
+        - has: { field: name, regex: '^[A-Z]' }
+        - not: { has: { field: name, regex: '^(Test|Benchmark|Example|Fuzz)([A-Z_0-9]|$)' } }
+    - kind: method_declaration
+      has: { field: name, regex: '^[A-Z]' }
+    - kind: type_declaration
+      has: { kind: type_spec, has: { field: name, regex: '^[A-Z]' } }
+  not: { follows: { kind: comment } }
+---
+id: mnt-doc-014-java-public-without-doc
+language: Java
+severity: info
+message: public なクラス・メソッドに説明コメント（/** */）がありません
+note: 何をするか・前提条件・失敗時の振る舞い（@throws）を Javadoc（/** */）で書いてください。エディタで呼び出し側にも表示されます。
+metadata: { principle: MNT-DOC-014 }
+rule:
+  any:
+    - kind: method_declaration
+      not: { has: { field: name, regex: '^(get|set|is)[A-Z]' } }
+    - kind: class_declaration
+    - kind: interface_declaration
+    - kind: record_declaration
+    - kind: enum_declaration
+  all:
+    - has: { kind: modifiers, regex: '\bpublic\b' }
+    - not: { has: { kind: modifiers, regex: '@(Override|Test|ParameterizedTest|RepeatedTest|BeforeEach|AfterEach|BeforeAll|AfterAll)\b' } }
+    - not: { follows: { kind: block_comment, regex: '^/\*\*' } }

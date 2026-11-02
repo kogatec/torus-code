@@ -23,3 +23,9 @@ valid:
 invalid:
   - cells = [c for row in grid for c in row]
   - pairs = {(a, b) for a in xs if a for b in ys}
+---
+id: sim-clever-012-java-nested-ternary
+valid:
+  - 'String label = isAdmin ? "admin" : "user";'
+invalid:
+  - 'String label = isAdmin ? "admin" : isOwner ? "owner" : "user";'

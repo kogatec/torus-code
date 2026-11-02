@@ -1,6 +1,6 @@
 {
   "name": "torus-code",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Principle packs, automated checks, and a Claude Code plugin that keep AI coding agents true to the design style you choose, from development through maintenance",
   "license": "MIT",

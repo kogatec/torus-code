@@ -5,7 +5,7 @@ import { copyPack, diffPacks, hashPackDir, listPacks, loadPack, type PackDiff } 
 import { defaultProfile, readProfile, writeProfile, type Phase, type Profile, type ReviewMode } from "./profile.ts";
 import { compile, type Compiled } from "./resolve.ts";
 
-export const TOOL_VERSION = "0.3.0";
+export const TOOL_VERSION = "0.4.0";
 
 export interface StyleChoice {
   primary: string;

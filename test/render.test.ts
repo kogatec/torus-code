@@ -34,6 +34,27 @@ test("guessLayers：パスから層を推測する", () => {
   assert.deepEqual(guessLayers("src/util.ts"), []);
 });
 
+test("guessLayers：Go のテスト（_test.go）と、コマンドの置き場（cmd/）も推測する", () => {
+  assert.ok(guessLayers("internal/store/user_test.go").includes("test"));
+  assert.ok(!guessLayers("internal/store/user.go").includes("test"));
+  assert.ok(guessLayers("cmd/server/main.go").includes("cli_entry"));
+  assert.ok(guessLayers("src/test/java/app/OrderTest.java").includes("test"));
+});
+
+test("renderFileContext：Rust・Go・Java・JavaScript のファイルにも、言語と層に合う原則を出す", () => {
+  const { compiled } = setupProject();
+  for (const file of ["src/db/users.rs", "internal/db/users.go", "src/main/java/app/db/UserDao.java", "web/db/users.js"]) {
+    assert.ok(renderFileContext(compiled, file)?.includes("- [SEC-INJ-002]"), file);
+  }
+});
+
+test("renderFileContext：型の原則（MNT-TYPE-006）は、型のない JavaScript には出さない", () => {
+  const { compiled } = setupProject({ primary: "maintainable", secondary: [] });
+  assert.ok(renderFileContext(compiled, "src/a.ts")!.includes("[MNT-TYPE-006]"));
+  assert.ok(renderFileContext(compiled, "src/a.rs")!.includes("[MNT-TYPE-006]"));
+  assert.ok(!renderFileContext(compiled, "src/a.js")!.includes("[MNT-TYPE-006]"));
+});
+
 test("renderSessionContext：L0 の構成と長さ", () => {
   const { compiled } = setupProject({ primary: "security-resilience", secondary: [{ pack: "simple-readable", weight: 0.7 }] });
   const text = renderSessionContext(compiled);

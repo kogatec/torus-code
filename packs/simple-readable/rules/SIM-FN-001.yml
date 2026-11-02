@@ -22,3 +22,51 @@ metadata: { principle: SIM-FN-001 }
 rule:
   kind: function_definition
   regex: '^(?:[^\n]*\n){60,}'
+---
+id: sim-fn-001-rs-long-function
+language: Rust
+severity: warning
+message: 関数が60行を超えています
+note: 1つの関数が1つのことだけをするように、意味のまとまりごとに名前を付けた関数へ分けてください。
+metadata: { principle: SIM-FN-001 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  any:
+    - kind: function_item
+    - kind: closure_expression
+  regex: '^(?:[^\n]*\n){60,}'
+  not: { matches: in-test-module }
+---
+id: sim-fn-001-go-long-function
+language: Go
+severity: warning
+message: 関数が60行を超えています
+note: 1つの関数が1つのことだけをするように、意味のまとまりごとに名前を付けた関数へ分けてください。
+metadata: { principle: SIM-FN-001 }
+rule:
+  any:
+    - kind: function_declaration
+    - kind: method_declaration
+    - kind: func_literal
+  regex: '^(?:[^\n]*\n){60,}'
+---
+id: sim-fn-001-java-long-function
+language: Java
+severity: warning
+message: メソッドが60行を超えています
+note: 1つのメソッドが1つのことだけをするように、意味のまとまりごとに名前を付けたメソッドへ分けてください。
+metadata: { principle: SIM-FN-001 }
+rule:
+  any:
+    - kind: method_declaration
+    - kind: constructor_declaration
+    - kind: lambda_expression
+  regex: '^(?:[^\n]*\n){60,}'

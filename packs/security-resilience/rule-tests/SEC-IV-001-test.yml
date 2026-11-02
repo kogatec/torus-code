@@ -19,3 +19,57 @@ invalid:
   - q = request.args.get("q")
   - data = request.get_json()
   - data = json.loads(request.data)
+---
+id: sec-iv-001-rs-untyped-extractor
+valid:
+  - 'async fn create(Json(body): Json<CreateUser>) -> StatusCode { todo!() }'
+  - 'async fn list(Query(q): Query<ListParams>) -> Json<Value> { todo!() }'
+invalid:
+  - 'async fn create(Json(body): Json<Value>) -> StatusCode { todo!() }'
+  - 'async fn create(body: web::Json<serde_json::Value>) -> HttpResponse { todo!() }'
+  - 'async fn search(Query(q): Query<HashMap<String, String>>) -> String { todo!() }'
+---
+id: sec-iv-001-go-raw-request
+valid:
+  - 'id, err := strconv.Atoi(r.URL.Query().Get("id"))'
+  - 'n, err := strconv.ParseInt(r.FormValue("n"), 10, 64)'
+  - 'err := c.ShouldBindJSON(&req)'
+  - 'u, err := uuid.Parse(c.Param("id"))'
+  - 'err := decoder.Decode(&params, r.URL.Query())'
+invalid:
+  - 'name := r.URL.Query().Get("name")'
+  - 'db.Exec(q, r.FormValue("email"))'
+  - 'id := c.Param("id")'
+  - 'id := chi.URLParam(r, "id")'
+---
+id: sec-iv-001-java-raw-request
+valid:
+  - 'int page = Integer.parseInt(request.getParameter("page"));'
+  - 'UUID id = UUID.fromString(req.getParameter("id"));'
+invalid:
+  - 'String name = request.getParameter("name");'
+  - 'repo.find(req.getParameter("q"));'
+---
+id: sec-iv-001-java-unvalidated-body
+valid:
+  - |
+    class C {
+      @PostMapping("/users")
+      User create(@Valid @RequestBody CreateUserRequest body) { return null; }
+    }
+  - |
+    class WebhookController {
+      @PostMapping("/webhook")
+      void receive(@RequestHeader("X-Signature") String signature, @RequestBody String payload) {}
+    }
+invalid:
+  - |
+    class C {
+      @PostMapping("/users")
+      User create(@RequestBody CreateUserRequest body) { return null; }
+    }
+  - |
+    class C {
+      @PostMapping("/users")
+      User create(@Valid @RequestBody Map<String, Object> body) { return null; }
+    }

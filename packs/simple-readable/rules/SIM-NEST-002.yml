@@ -53,3 +53,101 @@ rule:
         matches: control
   not:
     inside: { stopBy: end, matches: control }
+---
+id: sim-nest-002-rs-deep-nesting
+language: Rust
+severity: warning
+message: 制御構文（if / for / while / loop / match）の入れ子が4段以上あります
+note: 条件を満たさない場合を先に return / continue で抜ける（早期リターン）か、内側を関数に分けてください。
+metadata: { principle: SIM-NEST-002 }
+utils:
+  control:
+    any:
+      - kind: if_expression
+        not: { inside: { kind: else_clause } }
+      - kind: for_expression
+      - kind: while_expression
+      - kind: loop_expression
+      - kind: match_expression
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  matches: control
+  has:
+    stopBy: end
+    matches: control
+    has:
+      stopBy: end
+      matches: control
+      has:
+        stopBy: end
+        matches: control
+  not:
+    any:
+      - inside: { stopBy: end, matches: control }
+      - matches: in-test-module
+---
+id: sim-nest-002-go-deep-nesting
+language: Go
+severity: warning
+message: 制御構文（if / for / switch / select）の入れ子が4段以上あります
+note: 条件を満たさない場合を先に return / continue で抜ける（早期リターン）か、内側を関数に分けてください。
+metadata: { principle: SIM-NEST-002 }
+utils:
+  control:
+    any:
+      - kind: if_statement
+        not: { inside: { kind: if_statement, field: alternative } }
+      - kind: for_statement
+      - kind: expression_switch_statement
+      - kind: type_switch_statement
+      - kind: select_statement
+rule:
+  matches: control
+  has:
+    stopBy: end
+    matches: control
+    has:
+      stopBy: end
+      matches: control
+      has:
+        stopBy: end
+        matches: control
+  not:
+    inside: { stopBy: end, matches: control }
+---
+id: sim-nest-002-java-deep-nesting
+language: Java
+severity: warning
+message: 制御構文（if / for / while / switch）の入れ子が4段以上あります
+note: 条件を満たさない場合を先に return / continue で抜ける（早期リターン）か、内側をメソッドに分けてください。
+metadata: { principle: SIM-NEST-002 }
+utils:
+  control:
+    any:
+      - kind: if_statement
+        not: { inside: { kind: if_statement, field: alternative } }
+      - kind: for_statement
+      - kind: enhanced_for_statement
+      - kind: while_statement
+      - kind: do_statement
+      - kind: switch_expression
+rule:
+  matches: control
+  has:
+    stopBy: end
+    matches: control
+    has:
+      stopBy: end
+      matches: control
+      has:
+        stopBy: end
+        matches: control
+  not:
+    inside: { stopBy: end, matches: control }

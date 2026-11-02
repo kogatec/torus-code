@@ -28,3 +28,51 @@ invalid:
   - |
     class Cart:
         pass
+---
+id: mnt-doc-014-rs-pub-without-doc
+valid:
+  - |
+    /// 税込価格（円・切り捨て）を返す。
+    #[must_use]
+    pub fn with_tax(price: u64) -> u64 { price * 110 / 100 }
+  - 'fn helper() {}'
+  - |
+    impl Order {
+        pub fn total(&self) -> u64 { 0 }
+    }
+invalid:
+  - 'pub fn with_tax(price: u64) -> u64 { price * 110 / 100 }'
+  - |
+    #[derive(Debug)]
+    pub struct Order { id: u64 }
+---
+id: mnt-doc-014-go-exported-without-doc
+valid:
+  - |
+    // WithTax は税込価格（円・切り捨て）を返す。
+    func WithTax(price int) int { return price * 110 / 100 }
+  - 'func helper() {}'
+  - 'func TestWithTax(t *testing.T) {}'
+invalid:
+  - 'func WithTax(price int) int { return price * 110 / 100 }'
+  - 'type Order struct{ ID int }'
+---
+id: mnt-doc-014-java-public-without-doc
+valid:
+  - |
+    class Tax {
+      /** 税込価格（円・切り捨て）を返す。 */
+      public static long withTax(long price) { return price * 110 / 100; }
+    }
+  - |
+    class Order {
+      @Override
+      public String toString() { return "order"; }
+      public String getName() { return name; }
+    }
+invalid:
+  - |
+    class Tax {
+      public static long withTax(long price) { return price * 110 / 100; }
+    }
+  - 'public class Order {}'

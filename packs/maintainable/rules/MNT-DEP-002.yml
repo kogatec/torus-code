@@ -24,3 +24,13 @@ metadata: { principle: MNT-DEP-002 }
 rule:
   kind: import_from_statement
   regex: '^from\s+\.{3,}'
+---
+id: mnt-dep-002-rs-deep-super
+language: Rust
+severity: warning
+message: 3階層以上さかのぼる相対パス（super::super::super::）で use しています
+note: '遠いモジュールに直接依存しています。crate:: から始まるパスか、親モジュールが pub use で公開した窓口から use し、依存の向きが層の決まりに沿っているか確かめてください。'
+metadata: { principle: MNT-DEP-002 }
+rule:
+  kind: use_declaration
+  regex: '\buse\s+(super::){3,}'

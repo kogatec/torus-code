@@ -4,10 +4,27 @@ import path from "node:path";
 import YAML from "yaml";
 import { hashPackDir, loadPack, type Pack, type Principle, type Severity } from "./packs.ts";
 import { readProfile, type Profile } from "./profile.ts";
-import { writeFileAtomic, type ProjectPaths } from "./paths.ts";
+import { writeFileAtomic, type Language, type ProjectPaths } from "./paths.ts";
 
 /** コンパイル結果の形やルールの書き出し方を変えたら上げる（古いキャッシュを捨てるため） */
-const COMPILER_VERSION = "1";
+const COMPILER_VERSION = "3";
+
+/** ファイルの言語ごとに当てるルールの言語（TypeScript のルールは Tsx 用にも複製し、.tsx と JavaScript が使う） */
+const RULE_LANGUAGES: Record<Language, string[]> = {
+  typescript: ["TypeScript", "Tsx"],
+  javascript: ["Tsx"],
+  python: ["Python"],
+  rust: ["Rust"],
+  go: ["Go"],
+  java: ["Java"],
+};
+
+/**
+ * JavaScript（JSX を含む）は Tsx として読み、TypeScript のルールを当てる。Tsx の構文解析は JavaScript の構文を
+ * すべて読めるので、JavaScript 用のルールを別に持たずに済む。パックが javascript を宣言しているときだけ有効にする
+ * （プロジェクトに複製した古い版のパックでは、プラグインを更新しても .js を検査しない）
+ */
+const JAVASCRIPT_GLOBS = ["*.js", "*.mjs", "*.cjs", "*.jsx"];
 
 export interface ActivePrinciple extends Principle {
   pack: string;
@@ -55,7 +72,10 @@ export interface Compiled {
   skipped: { id: string; reason: string }[];
   axes: AxisResolution[];
   rules: ActiveRule[];
+  /** すべてのルールを当てる ast-grep の設定（ディレクトリや複数の言語をまとめて検査するとき） */
   sgconfig: string;
+  /** ファイルの言語ごとの設定。その言語のルールだけを読み込むので速い。ルールのない言語は含まない */
+  sgconfigs: Partial<Record<Language, string>>;
   warnings: string[];
 }
 
@@ -115,24 +135,46 @@ function resolveAxes(principles: ActivePrinciple[]): AxisResolution[] {
   return out.sort((a, b) => a.axis.localeCompare(b.axis));
 }
 
-/** ast-grep のルールを書き出す。TypeScript のルールは .tsx 用にも複製する */
-function writeAstGrepConfig(paths: ProjectPaths, hash: string, packs: Pack[], rules: ActiveRule[]): string {
+type AstGrepConfigs = Pick<Compiled, "sgconfig" | "sgconfigs">;
+
+/**
+ * ast-grep のルールと設定を書き出す。ルールは言語ごとのディレクトリに分け、全体の設定のほかに、
+ * ファイルの言語ごとの設定も作る。TypeScript のルールは Tsx 用にも複製する（.tsx と JavaScript が使う）
+ */
+function writeAstGrepConfig(paths: ProjectPaths, hash: string, packs: Pack[], rules: ActiveRule[]): AstGrepConfigs {
   const dir = path.join(paths.cacheDir, `sg-${hash}`);
-  const sgconfig = path.join(dir, "sgconfig.yml");
-  if (fs.existsSync(sgconfig)) return sgconfig;
+  const javascript = packs.some((p) => p.languages.includes("javascript"));
+  const present = new Set(rules.flatMap((r) => (r.language === "TypeScript" ? ["TypeScript", "Tsx"] : [r.language])));
+  const ruleDirsFor = (lang: Language) => RULE_LANGUAGES[lang].filter((l) => present.has(l)).map((l) => `rules/${l}`);
+  const fileLanguages = (Object.keys(RULE_LANGUAGES) as Language[]).filter(
+    (lang) => ruleDirsFor(lang).length > 0 && (lang !== "javascript" || javascript),
+  );
+  const result: AstGrepConfigs = {
+    sgconfig: path.join(dir, "sgconfig.yml"),
+    sgconfigs: Object.fromEntries(fileLanguages.map((lang) => [lang, path.join(dir, `sgconfig-${lang}.yml`)])),
+  };
+  if (fs.existsSync(result.sgconfig)) return result;
   const tmp = `${dir}.${process.pid}.tmp`;
   fs.rmSync(tmp, { recursive: true, force: true });
   fs.mkdirSync(path.join(tmp, "rules"), { recursive: true });
   const configs = new Map(packs.flatMap((p) => p.rules.map((r) => [r.id, r.config] as const)));
+  const writeRule = (language: string, id: string, config: Record<string, unknown>) => {
+    fs.mkdirSync(path.join(tmp, "rules", language), { recursive: true });
+    fs.writeFileSync(path.join(tmp, "rules", language, `${id}.yml`), YAML.stringify(config));
+  };
   for (const rule of rules) {
     const config = { ...configs.get(rule.id), severity: rule.severity };
-    fs.writeFileSync(path.join(tmp, "rules", `${rule.id}.yml`), YAML.stringify(config));
+    writeRule(rule.language, rule.id, config);
     if (rule.language === "TypeScript") {
-      const tsx = { ...config, id: `${rule.id}__tsx`, language: "Tsx" };
-      fs.writeFileSync(path.join(tmp, "rules", `${rule.id}__tsx.yml`), YAML.stringify(tsx));
+      writeRule("Tsx", `${rule.id}__tsx`, { ...config, id: `${rule.id}__tsx`, language: "Tsx" });
     }
   }
-  fs.writeFileSync(path.join(tmp, "sgconfig.yml"), YAML.stringify({ ruleDirs: ["rules"] }));
+  const languageGlobs = javascript ? { languageGlobs: { tsx: JAVASCRIPT_GLOBS } } : {};
+  fs.writeFileSync(path.join(tmp, "sgconfig.yml"), YAML.stringify({ ruleDirs: ["rules"], ...languageGlobs }));
+  for (const lang of fileLanguages) {
+    const config = { ruleDirs: ruleDirsFor(lang), ...(lang === "javascript" ? languageGlobs : {}) };
+    fs.writeFileSync(path.join(tmp, `sgconfig-${lang}.yml`), YAML.stringify(config));
+  }
   try {
     fs.renameSync(tmp, dir);
   } catch {
@@ -145,9 +187,10 @@ function writeAstGrepConfig(paths: ProjectPaths, hash: string, packs: Pack[], ru
       fs.rmSync(path.join(paths.cacheDir, e), { recursive: true, force: true });
     }
   }
-  return sgconfig;
+  return result;
 }
 
+/** 設定と複製したパックから、有効な原則・ルール・ast-grep の設定をまとめ、キャッシュに書く */
 export function compile(paths: ProjectPaths): Compiled {
   const profile = readProfile(paths.profile);
   const selected = loadSelectedPacks(paths, profile);
@@ -231,7 +274,7 @@ export function compile(paths: ProjectPaths): Compiled {
     skipped,
     axes: resolveAxes(principles),
     rules,
-    sgconfig: writeAstGrepConfig(paths, hash, selected.map((s) => s.pack), rules),
+    ...writeAstGrepConfig(paths, hash, selected.map((s) => s.pack), rules),
     warnings,
   };
   writeFileAtomic(path.join(paths.cacheDir, "compiled.json"), JSON.stringify(compiled, null, 2));

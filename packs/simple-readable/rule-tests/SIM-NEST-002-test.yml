@@ -38,3 +38,66 @@ invalid:
             for item in o.items:
                 if item.qty > 0:
                     ship(item)
+---
+id: sim-nest-002-rs-deep-nesting
+valid:
+  - |
+    for order in &orders {
+        if !order.paid { continue; }
+        for item in &order.items {
+            if item.qty > 0 { ship(item); }
+        }
+    }
+invalid:
+  - |
+    for order in &orders {
+        if order.paid {
+            for item in &order.items {
+                if item.qty > 0 { ship(item); }
+            }
+        }
+    }
+---
+id: sim-nest-002-go-deep-nesting
+valid:
+  - |
+    func ship(orders []Order) {
+    	for _, o := range orders {
+    		if !o.Paid {
+    			continue
+    		}
+    		for _, it := range o.Items {
+    			send(it)
+    		}
+    	}
+    }
+invalid:
+  - |
+    func ship(orders []Order) {
+    	for _, o := range orders {
+    		if o.Paid {
+    			for _, it := range o.Items {
+    				if it.Qty > 0 {
+    					send(it)
+    				}
+    			}
+    		}
+    	}
+    }
+---
+id: sim-nest-002-java-deep-nesting
+valid:
+  - |
+    for (Order o : orders) {
+      if (!o.isPaid()) continue;
+      for (Item it : o.getItems()) { ship(it); }
+    }
+invalid:
+  - |
+    for (Order o : orders) {
+      if (o.isPaid()) {
+        for (Item it : o.getItems()) {
+          if (it.getQty() > 0) { ship(it); }
+        }
+      }
+    }

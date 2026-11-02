@@ -40,3 +40,75 @@ rule:
       - kind: binary_operator
       - kind: comparison_operator
       - kind: argument_list
+---
+id: sim-magic-005-rs-magic-number
+language: Rust
+severity: info
+message: 意味の分からない数値（マジックナンバー）が計算・比較・引数に直接書かれています
+note: 'const SESSION_TIMEOUT_SECS: u64 = 30 * 60; のように、意味が分かる名前の定数にしてください。'
+metadata: { principle: SIM-MAGIC-005 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  any:
+    - kind: integer_literal
+    - kind: float_literal
+  all:
+    - any:
+        - inside: { kind: binary_expression }
+        - inside: { kind: arguments }
+    - not: { regex: '^(0|1|2|10|100|1000|0\.5|1\.0|0\.0)(_?([iu](8|16|32|64|128|size)|f32|f64))?$' }
+    - not: { inside: { stopBy: end, any: [ { kind: const_item }, { kind: static_item } ] } }
+    - not: { matches: in-test-module }
+---
+id: sim-magic-005-go-magic-number
+language: Go
+severity: info
+message: 意味の分からない数値（マジックナンバー）が計算・比較・引数に直接書かれています
+note: 'const sessionTimeout = 30 * time.Minute のように、意味が分かる名前の定数にしてください。'
+metadata: { principle: SIM-MAGIC-005 }
+rule:
+  any:
+    - kind: int_literal
+    - kind: float_literal
+  all:
+    - any:
+        - inside: { kind: binary_expression }
+        - inside: { kind: argument_list }
+    - not: { regex: '^(0|1|2|10|100|1000|0\.5|1\.0|0\.0)$' }
+    - not: { inside: { stopBy: end, kind: const_declaration } }
+    # strconv.ParseInt(s, 10, 64) の基数とビット幅は、決まった書き方なので対象外
+    - not:
+        inside:
+          kind: argument_list
+          inside:
+            kind: call_expression
+            has: { field: function, regex: '^strconv\.' }
+---
+id: sim-magic-005-java-magic-number
+language: Java
+severity: info
+message: 意味の分からない数値（マジックナンバー）が計算・比較・引数に直接書かれています
+note: 'static final long SESSION_TIMEOUT_MS = 30 * 60 * 1000; のように、意味が分かる名前の定数にしてください。'
+metadata: { principle: SIM-MAGIC-005 }
+rule:
+  any:
+    - kind: decimal_integer_literal
+    - kind: decimal_floating_point_literal
+  all:
+    - any:
+        - inside: { kind: binary_expression }
+        - inside: { kind: argument_list }
+    - not: { regex: '^(0|1|2|10|100|1000|0\.5|1\.0|0\.0)[lLfFdD]?$' }
+    - not:
+        inside:
+          stopBy: end
+          kind: variable_declarator
+          has: { field: name, regex: '^[A-Z][A-Z0-9_]*$' }

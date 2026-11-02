@@ -33,3 +33,58 @@ rule:
         has: { field: function, regex: '(^|\.)sleep$' }
     - not: { has: { kind: raise_statement, stopBy: end } }
     - not: { has: { kind: break_statement, stopBy: end } }
+---
+id: res-retry-012-rs-unbounded-retry
+language: Rust
+severity: warning
+message: 回数の上限がないリトライに見えます
+note: 最大回数を決め、超えたら Err を返してください。待ち時間は指数的に伸ばし、ランダムな揺らぎ（ジッター）を加えてください（backoff クレートなども使えます）。
+metadata: { principle: RES-RETRY-012 }
+rule:
+  kind: loop_expression
+  all:
+    - has:
+        stopBy: end
+        kind: call_expression
+        has: { field: function, regex: '(^|::)sleep$' }
+    - has: { stopBy: end, regex: '^Err\s*\(' }
+    - not: { has: { stopBy: end, kind: break_expression } }
+    - not: { has: { stopBy: end, kind: return_expression, regex: '^return\s+Err\s*\(' } }
+    - not: { has: { stopBy: end, kind: try_expression } }
+    - not: { has: { stopBy: end, kind: macro_invocation, has: { field: macro, regex: '^((anyhow|eyre)::)?(panic|bail)$' } } }
+---
+id: res-retry-012-go-unbounded-retry
+language: Go
+severity: warning
+message: 回数の上限がないリトライに見えます
+note: 最大回数を決め、超えたらエラーを返してください。待ち時間は指数的に伸ばし、ランダムな揺らぎ（ジッター）を加えてください（cenkalti/backoff なども使えます）。
+metadata: { principle: RES-RETRY-012 }
+rule:
+  kind: for_statement
+  regex: '^for\s*\{'
+  all:
+    - has: { stopBy: end, kind: call_expression, has: { field: function, regex: '^time\.Sleep$' } }
+    - has: { stopBy: end, kind: binary_expression, regex: '^\w*[eE]rr\w*\s*[!=]=\s*nil$' }
+    - not: { has: { stopBy: end, kind: break_statement } }
+    - not: { has: { stopBy: end, kind: return_statement, regex: '(?i)err' } }
+    - not: { has: { stopBy: end, kind: call_expression, has: { field: function, regex: '^(panic|log\.Fatal\w*)$' } } }
+---
+id: res-retry-012-java-unbounded-retry
+language: Java
+severity: warning
+message: 回数の上限がないリトライに見えます
+note: 最大回数を決め、超えたら例外を投げてください。待ち時間は指数的に伸ばし、ランダムな揺らぎ（ジッター）を加えてください（Resilience4j の Retry なども使えます）。
+metadata: { principle: RES-RETRY-012 }
+rule:
+  any:
+    - kind: while_statement
+      has: { field: condition, regex: '^\(\s*true\s*\)$' }
+    - kind: for_statement
+      regex: '^for\s*\(\s*;\s*;\s*\)'
+    - kind: do_statement
+      regex: 'while\s*\(\s*true\s*\)\s*;$'
+  all:
+    - has: { stopBy: end, kind: try_statement }
+    - has: { stopBy: end, kind: method_invocation, has: { field: name, regex: '^(sleep|parkNanos)$' } }
+    - not: { has: { stopBy: end, kind: throw_statement } }
+    - not: { has: { stopBy: end, kind: break_statement } }

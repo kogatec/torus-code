@@ -5,14 +5,14 @@ summary: ログに秘密情報を出さず、応答にスタックトレース�
 level: mandatory
 styles: { security_resilience: 1.0 }
 applies_when:
-  languages: [typescript, python]
+  languages: [typescript, javascript, python, rust, go, java]
   layers: [any]
 not_when: []
 rationale: >
   ログは多くの人とサービスが読むため、秘密情報が広がりやすい。
   スタックトレースは、攻撃者に内部の構造を教えてしまう。
 checks:
-  static: [sec-leak-006-ts-log-secret, sec-leak-006-ts-stack-to-client, sec-leak-006-py-log-secret, sec-leak-006-py-traceback-response]
+  static: [sec-leak-006-ts-log-secret, sec-leak-006-ts-stack-to-client, sec-leak-006-py-log-secret, sec-leak-006-py-traceback-response, sec-leak-006-rs-log-secret, sec-leak-006-rs-debug-error-to-client, sec-leak-006-go-log-secret, sec-leak-006-go-stack-to-client, sec-leak-006-java-log-secret, sec-leak-006-java-stack-to-client]
   review: リクエスト全体やユーザーオブジェクトを丸ごとログに出していないか。エラー応答が一般的なメッセージと問い合わせ ID だけになっているか
   tests: 例外を起こしたときの応答に、スタックトレースやファイルパスが含まれないことを確かめる
 example:

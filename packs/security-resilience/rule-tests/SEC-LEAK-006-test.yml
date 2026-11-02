@@ -32,3 +32,60 @@ valid:
 invalid:
   - return jsonify(error=traceback.format_exc()), 500
   - return traceback.format_exc()
+---
+id: sec-leak-006-rs-log-secret
+valid:
+  - 'info!("user {} logged in", user_id);'
+  - 'info!("token issued: {}", mask(&access_token));'
+  - 'debug!("next token: {:?}", token);'
+invalid:
+  - 'println!("password={}", password);'
+  - 'log::debug!("auth: {}", req.authorization);'
+  - 'tracing::info!(api_key = %api_key, "calling");'
+  - 'info!("token={access_token}");'
+---
+id: sec-leak-006-rs-debug-error-to-client
+valid:
+  - 'return (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string());'
+  - 'tracing::error!("charge failed: {:?}", err);'
+invalid:
+  - 'return (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", err));'
+  - 'HttpResponse::InternalServerError().body(format!("failed: {e:?}"))'
+---
+id: sec-leak-006-go-log-secret
+valid:
+  - 'log.Printf("user %s logged in", userID)'
+  - 'slog.Info("token issued", "token", mask(accessToken))'
+  - 'log.Printf("unexpected token %v", token)'
+invalid:
+  - 'log.Printf("password=%s", password)'
+  - 'slog.Info("login", "user", req.Email, "password", req.Password)'
+  - 'logger.Info("calling api", zap.String("api_key", apiKey))'
+  - 'log.Printf("refreshing with %s", refreshToken)'
+---
+id: sec-leak-006-go-stack-to-client
+valid:
+  - 'log.Printf("panic: %v\n%s", rec, debug.Stack())'
+  - 'http.Error(w, "internal error", http.StatusInternalServerError)'
+invalid:
+  - 'http.Error(w, string(debug.Stack()), http.StatusInternalServerError)'
+  - 'func recoverer(w http.ResponseWriter) { w.Write(debug.Stack()) }'
+---
+id: sec-leak-006-java-log-secret
+valid:
+  - 'log.info("user {} logged in", userId);'
+  - 'log.debug("token {}", mask(accessToken));'
+  - 'log.debug("unexpected token {}", token);'
+invalid:
+  - 'log.info("password={}", password);'
+  - 'logger.debug("login {}", request.getPassword());'
+  - 'System.out.println("api key: " + apiKey);'
+  - 'log.info("issued {}", response.getAccessToken());'
+---
+id: sec-leak-006-java-stack-to-client
+valid:
+  - 'log.error("failed", e);'
+  - 'return ResponseEntity.status(500).body(new ErrorResponse("internal error", requestId));'
+invalid:
+  - 'e.printStackTrace(response.getWriter());'
+  - 'return ResponseEntity.status(500).body(ExceptionUtils.getStackTrace(e));'

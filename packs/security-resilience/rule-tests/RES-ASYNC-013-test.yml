@@ -13,3 +13,54 @@ valid:
 invalid:
   - asyncio.create_task(worker())
   - loop.create_task(worker())
+---
+id: res-async-013-rs-detached-task
+valid:
+  - 'let handle = tokio::spawn(async move { work().await });'
+  - 'let child = Command::new("ls").spawn()?;'
+invalid:
+  - 'tokio::spawn(async move { send_email(&user).await });'
+  - 'std::thread::spawn(move || process(job));'
+---
+id: res-async-013-go-wg-add-in-goroutine
+valid:
+  - |
+    func run() {
+    	wg.Add(1)
+    	go func() {
+    		defer wg.Done()
+    		work()
+    	}()
+    }
+invalid:
+  - |
+    func run() {
+    	go func() {
+    		wg.Add(1)
+    		defer wg.Done()
+    		work()
+    	}()
+    }
+---
+id: res-async-013-go-errgroup-without-wait
+valid:
+  - |
+    func fetchAll(ctx context.Context) error {
+    	g, ctx := errgroup.WithContext(ctx)
+    	g.Go(func() error { return fetch(ctx) })
+    	return g.Wait()
+    }
+invalid:
+  - |
+    func fetchAll(ctx context.Context) {
+    	g, ctx := errgroup.WithContext(ctx)
+    	g.Go(func() error { return fetch(ctx) })
+    }
+---
+id: res-async-013-java-dropped-future
+valid:
+  - 'CompletableFuture<Void> f = CompletableFuture.runAsync(this::sync, executor);'
+  - 'CompletableFuture.runAsync(this::sync).exceptionally(e -> { log.error("sync failed", e); return null; });'
+invalid:
+  - 'CompletableFuture.runAsync(() -> sendEmail(user));'
+  - 'executor.submit(() -> process(job));'

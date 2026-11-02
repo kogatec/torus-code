@@ -4,7 +4,7 @@ title: 抽象化は、必要が2回以上現れてから行う
 summary: 実装が1つしかないインターフェースや、使われていない拡張ポイントを作らない
 level: default
 styles: { simple_readable: 1.0, speed: 0.8 }
-applies_when: { languages: [typescript, python], layers: [any] }
+applies_when: { languages: [typescript, javascript, python, rust, go, java], layers: [any] }
 not_when:
   - テストのために差し替えが必要な境界（外部 API・時刻・乱数など）
   - 外部に公開するライブラリの API

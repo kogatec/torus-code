@@ -31,3 +31,197 @@ rule:
     - has:
         field: arguments
         has: { kind: attribute, stopBy: end, regex: '^request\.(args|form|json|values|files|view_args|get_json)$' }
+---
+id: sec-path-004-rs-user-path
+language: Rust
+severity: error
+message: 外部入力（Path / Query などで受け取った値）をそのままファイルのパスに使っています
+note: base.join(name).canonicalize() が base の内側か（starts_with(&base)）を確かめてから使ってください。ファイル名だけを受けるなら、Path::new(&name).file_name() で取り出してください。
+metadata: { principle: SEC-PATH-004 }
+utils:
+  file-op:
+    kind: call_expression
+    has:
+      field: function
+      regex: '(^|::)fs::\w+$|(^|::)File::(open|create)$|\.(join|open)$|^((std::)?path::)?(Path|PathBuf)::(new|from)$|(^|::)NamedFile::open(_async)?$|(^|::)ServeFile::new$'
+  # 文字列を受け取りうる Path / Query / Form / Json の引数（数値や Uuid だけを受ける Path は除く）
+  tainted:
+    kind: identifier
+    pattern: $NAME
+    inside:
+      kind: function_item
+      stopBy: end
+      all:
+        - has:
+            field: parameters
+            has:
+              kind: parameter
+              all:
+                - has:
+                    field: type
+                    regex: '^(\w+::)*(Path|Query|Form|Json)<'
+                    not: { regex: '^(\w+::)*Path<\s*((u|i)(8|16|32|64|128|size)|bool|f32|f64|(uuid::)?Uuid)\s*>$' }
+                - has:
+                    field: pattern
+                    any:
+                      - kind: identifier
+                        pattern: $NAME
+                      - kind: tuple_struct_pattern
+                        has: { kind: identifier, nthChild: 2, pattern: $NAME }
+        - not: { regex: '\.starts_with\(|sanitize\w*\(|\.file_name\(\)|Component::(ParentDir|Normal)' }
+  has-tainted:
+    any:
+      - matches: tainted
+      - has: { stopBy: end, matches: tainted }
+rule:
+  matches: file-op
+  # パスになる引数だけを見る（fs::write(パス, 中身) の中身などは見ない）
+  any:
+    - has: { field: arguments, has: { nthChild: 1, matches: has-tainted } }
+    - all:
+        - has: { field: function, regex: '(^|::)fs::(copy|rename|hard_link|soft_link)$' }
+        - has: { field: arguments, has: { nthChild: 2, matches: has-tainted } }
+  not:
+    inside:
+      kind: arguments
+      stopBy: end
+      inside: { matches: file-op }
+---
+id: sec-path-004-go-user-path
+language: Go
+severity: error
+message: 外部入力をそのままファイルのパスに使っています
+note: filepath.Join のあと、filepath.Rel や strings.HasPrefix で基準ディレクトリの内側か確かめてから使ってください（Go 1.24 以降は os.OpenRoot も使えます）。ファイル名だけを受けるなら filepath.Base で取り出してください。
+metadata: { principle: SEC-PATH-004 }
+utils:
+  file-op:
+    kind: call_expression
+    has:
+      field: function
+      regex: '^(os\.(Open|OpenFile|Create|ReadFile|WriteFile|Remove|RemoveAll|Mkdir|MkdirAll|ReadDir|Stat|Lstat|Rename|Symlink|Link)|ioutil\.(ReadFile|WriteFile|ReadDir)|(filepath|path)\.Join|http\.ServeFile)$|^(c|ctx)\.(File|FileAttachment|SendFile|Attachment|Download)$'
+  request-value:
+    any:
+      - kind: call_expression
+        has:
+          field: function
+          regex: '^(r|req|request)\.(FormValue|PostFormValue|PathValue|URL\.Query\(\)\.Get|Form\.Get|PostForm\.Get)$|^(c|ctx)\.(Query|DefaultQuery|Param|Params|PostForm|DefaultPostForm|QueryParam|FormValue)$|^chi\.URLParam$'
+      - kind: index_expression
+        has: { field: operand, regex: '^mux\.Vars\(' }
+  # 外部入力そのものか、同じ関数で外部入力を代入した変数（filepath.Base で取り出したファイル名は除く）
+  tainted:
+    any:
+      - matches: request-value
+      - kind: identifier
+        pattern: $NAME
+        inside:
+          stopBy: end
+          any: [ { kind: function_declaration }, { kind: method_declaration }, { kind: func_literal } ]
+          all:
+            - has:
+                stopBy: end
+                kind: short_var_declaration
+                all:
+                  - has: { field: left, has: { kind: identifier, pattern: $NAME } }
+                  - has: { field: right, has: { stopBy: end, matches: request-value } }
+            - not: { regex: 'strings\.HasPrefix\(|filepath\.Rel\(|filepath\.IsLocal\(|OpenRoot\(|filepath\.Base\(' }
+    not:
+      inside:
+        stopBy: end
+        kind: call_expression
+        has: { field: function, regex: '^(filepath|path)\.Base$' }
+  has-tainted:
+    any:
+      - matches: tainted
+      - has: { stopBy: end, matches: tainted }
+rule:
+  matches: file-op
+  # パスになる引数だけを見る（os.WriteFile(パス, 中身, 権限) の中身などは見ない）
+  any:
+    - all:
+        - has: { field: function, regex: '^(filepath|path)\.Join$' }
+        - has: { field: arguments, has: { matches: has-tainted } }
+    - all:
+        - has: { field: function, regex: '^http\.ServeFile$' }
+        - has: { field: arguments, has: { nthChild: 3, matches: has-tainted } }
+    - all:
+        - not: { has: { field: function, regex: '^((filepath|path)\.Join|http\.ServeFile)$' } }
+        - has: { field: arguments, has: { nthChild: 1, matches: has-tainted } }
+    - all:
+        - has: { field: function, regex: '^os\.(Rename|Symlink|Link)$' }
+        - has: { field: arguments, has: { nthChild: 2, matches: has-tainted } }
+  not:
+    inside:
+      kind: argument_list
+      stopBy: end
+      inside: { matches: file-op }
+---
+id: sec-path-004-java-user-path
+language: Java
+severity: error
+message: 外部入力をそのままファイルのパスに使っています
+note: base.resolve(name).normalize() が base の内側か（startsWith(base)）を確かめてから使ってください。ファイル名だけを受けるなら Path.of(name).getFileName() で取り出してください。
+metadata: { principle: SEC-PATH-004 }
+utils:
+  # すべての引数がパスの一部になるもの
+  path-parts-op:
+    any:
+      - kind: object_creation_expression
+        has: { field: type, regex: '^(File|FileInputStream|FileOutputStream|FileReader|FileWriter|RandomAccessFile|FileSystemResource)$' }
+      - kind: method_invocation
+        all:
+          - has: { field: object, regex: '^(Paths|Path)$' }
+          - has: { field: name, regex: '^(get|of)$' }
+      - kind: method_invocation
+        has: { field: name, regex: '^(resolve|resolveSibling)$' }
+  # Files の操作（1つ目の引数がパス。copy・move などは2つ目もパス）
+  files-op:
+    kind: method_invocation
+    has: { field: object, regex: '^Files$' }
+  # 外部入力そのものか、文字列で受け取るリクエストの引数（@PathVariable など）
+  tainted:
+    any:
+      - kind: method_invocation
+        any:
+          - all:
+              - has: { field: object, regex: '^(request|req|httpRequest|servletRequest|httpServletRequest)$' }
+              - has: { field: name, regex: '^(getParameter|getPathInfo)$' }
+          - has: { field: name, regex: '^getOriginalFilename$' }
+      - kind: identifier
+        pattern: $NAME
+        inside:
+          kind: method_declaration
+          stopBy: end
+          all:
+            - has:
+                field: parameters
+                has:
+                  kind: formal_parameter
+                  all:
+                    - has: { kind: modifiers, has: { regex: '^@(PathVariable|RequestParam|RequestHeader|RequestPart)\b' } }
+                    - has: { field: type, regex: '^String$' }
+                    - has: { field: name, pattern: $NAME }
+            - not: { regex: '\.startsWith\(|getFileName\(\)|FilenameUtils\.getName\(' }
+  has-tainted:
+    any:
+      - matches: tainted
+      - has: { stopBy: end, matches: tainted }
+rule:
+  any:
+    - all:
+        - matches: path-parts-op
+        - has: { field: arguments, has: { matches: has-tainted } }
+    # Files.copy(InputStream, Path) の1つ目は中身なので見ない
+    - all:
+        - matches: files-op
+        - not: { has: { field: name, regex: '^copy$' } }
+        - has: { field: arguments, has: { nthChild: 1, matches: has-tainted } }
+    - all:
+        - matches: files-op
+        - has: { field: name, regex: '^(copy|move|createLink|createSymbolicLink)$' }
+        - has: { field: arguments, has: { nthChild: 2, matches: has-tainted } }
+  not:
+    inside:
+      kind: argument_list
+      stopBy: end
+      inside:
+        any: [ { matches: path-parts-op }, { matches: files-op } ]

@@ -1,7 +1,7 @@
 {
   "name": "torus-code",
   "displayName": "Torus Code",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Keeps AI coding agents true to the design style you choose, from development through maintenance: principle packs, automated checks, and reviews",
   "author": { "name": "Torus Code" },
   "license": "MIT",

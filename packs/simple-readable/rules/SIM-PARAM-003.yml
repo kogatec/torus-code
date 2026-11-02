@@ -25,3 +25,55 @@ rule:
     - all:
         - has: { nthChild: 5 }
         - not: { has: { nthChild: 1, regex: '^(self|cls)$' } }
+---
+id: sim-param-003-rs-many-params
+language: Rust
+severity: warning
+message: 引数が5個以上あります（self を除く）
+note: 関係する引数を1つの構造体にまとめてください。
+metadata: { principle: SIM-PARAM-003 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  kind: parameters
+  any:
+    - has: { nthChild: 6 }
+    - all:
+        - has: { nthChild: 5 }
+        - not: { has: { nthChild: 1, kind: self_parameter } }
+  not: { matches: in-test-module }
+---
+id: sim-param-003-go-many-params
+language: Go
+severity: warning
+message: 引数が5個以上あります
+note: 関係する引数を1つの構造体にまとめてください。
+metadata: { principle: SIM-PARAM-003 }
+rule:
+  kind: parameter_list
+  regex: '^\((?:[^,()]*,){4,}[^()]*\)$'
+  any:
+    - inside: { kind: function_declaration, field: parameters }
+    - inside: { kind: method_declaration, field: parameters }
+    - inside: { kind: func_literal, field: parameters }
+---
+id: sim-param-003-java-many-params
+language: Java
+severity: warning
+message: 引数が5個以上あります
+note: 関係する引数を1つのクラス（record など）にまとめてください。
+metadata: { principle: SIM-PARAM-003 }
+rule:
+  kind: formal_parameters
+  has: { nthChild: 5 }
+  not:
+    any:
+      - inside: { kind: constructor_declaration }
+      - inside: { kind: record_declaration }

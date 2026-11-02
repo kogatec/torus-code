@@ -1,5 +1,5 @@
 id: simple-readable
-version: 0.1.1
+version: 0.2.0
 name: シンプル・可読性重視型
 description: 初めて読む人が、上から順に読むだけで理解できるコードを書く
 values: [短い関数, 浅い入れ子, 意味の分かる名前, 素直な書き方, 不要な抽象化をしない]
@@ -10,7 +10,7 @@ suited_for:
 tradeoffs:
   - 拡張の余地を先に作らないため、大きな変更のときに構造を作り直すことがある
   - 抽象化を後回しにするので、規模が大きくなったら保守性・長期運用重視型を副スタイルに加えるとよい
-languages: [typescript, python]
+languages: [typescript, javascript, python, rust, go, java]
 
 # このパックに mandatory の原則はない。違反は AI に知らせるが、止めない
 enforcement:
@@ -19,7 +19,8 @@ enforcement:
   allow_inline: '理由を書いたコメント（torus-allow <原則ID>: 理由）がある箇所は、例外として監査の一覧に載せる'
 
 # 静的検査の対象外にするパス（テストは読みやすさの基準が異なるため）
-exclude_paths: ["**/*.test.ts", "**/*.spec.ts", "**/tests/**", "**/test_*.py", "**/*_test.py"]
+# Rust のテスト用モジュール（#[cfg(test)]）はパスで分けられないため、各ルールの中で除いている
+exclude_paths: ["**/*.test.ts", "**/*.spec.ts", "**/*.test.js", "**/*.spec.js", "**/tests/**", "**/test_*.py", "**/*_test.py", "**/*_test.go", "**/src/test/**"]
 
 # L0（常駐ルール）に載せる順。summary を1行ずつ使う
 principles:
@@ -51,6 +52,6 @@ requires:
   optional: [tsc, ruff, eslint, jscpd]
 
 verification:
-  rule_tests: 静的ルール30本すべて、テストケース（検出すべき例・検出してはいけない例）を通過（ast-grep 0.45.3）
+  rule_tests: 静的ルール67本すべて、テストケース（検出すべき例・検出してはいけない例）を通過（ast-grep 0.45.3）
   effect: 未評価（評価の仕組みを作ってから測る）
   evidence: ESLint・Pylint など既存ツールの対応ルールへの参照のみ。リポジトリからの根拠は Phase 3 で付ける

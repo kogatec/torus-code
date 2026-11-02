@@ -24,3 +24,31 @@ invalid:
   - |
     if age >= 18:
         allow()
+---
+id: sim-magic-005-rs-magic-number
+valid:
+  - 'const SESSION_TIMEOUT_SECS: u64 = 30 * 60;'
+  - 'let total = price * 2;'
+invalid:
+  - 'let deadline = now + 86400;'
+  - 'sleep(Duration::from_millis(30000));'
+---
+id: sim-magic-005-go-magic-number
+valid:
+  - 'const sessionTimeout = 30 * time.Minute'
+  - 'func f() { total := price * 2; _ = total }'
+  - 'func f(s string) { n, err := strconv.ParseInt(s, 10, 64); _, _ = n, err }'
+invalid:
+  - 'func f() { deadline := now + 86400; _ = deadline }'
+  - 'func f() { time.Sleep(30000 * time.Millisecond) }'
+---
+id: sim-magic-005-java-magic-number
+valid:
+  - |
+    class C {
+      static final long SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+    }
+  - 'int total = price * 2;'
+invalid:
+  - 'long deadline = now + 86400;'
+  - 'Thread.sleep(30000);'

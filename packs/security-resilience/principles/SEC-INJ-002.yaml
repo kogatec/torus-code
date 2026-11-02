@@ -5,14 +5,14 @@ summary: SQL に値を埋め込まず、プレースホルダかクエリビル�
 level: mandatory
 styles: { security_resilience: 1.0 }
 applies_when:
-  languages: [typescript, python]
+  languages: [typescript, javascript, python, rust, go, java]
   layers: [data_access]
 not_when: []
 rationale: >
   値を文字列として埋め込むと、値の中身が SQL として解釈されうる。
   パラメータで渡せば、ドライバが値とコードを分けて扱う。
 checks:
-  static: [sec-inj-002-ts-sql-concat, sec-inj-002-ts-sql-template, sec-inj-002-py-sql-fstring, sec-inj-002-py-sql-format]
+  static: [sec-inj-002-ts-sql-concat, sec-inj-002-ts-sql-template, sec-inj-002-py-sql-fstring, sec-inj-002-py-sql-format, sec-inj-002-rs-sql-format, sec-inj-002-rs-sql-concat, sec-inj-002-go-sql-sprintf, sec-inj-002-go-sql-concat, sec-inj-002-java-sql-concat, sec-inj-002-java-sql-format]
   review: 動的に変わる部分（並び替えの列名など）は、許可リストから選んでいるか
   tests: "' OR '1'='1 などを入力しても、余分な行が返らないことを確かめる"
 example:

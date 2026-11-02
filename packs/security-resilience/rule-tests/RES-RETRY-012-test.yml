@@ -37,3 +37,78 @@ invalid:
             return call()
         except Exception:
             time.sleep(1)
+---
+id: res-retry-012-rs-unbounded-retry
+valid:
+  - |
+    for attempt in 0..MAX_ATTEMPTS {
+        match call().await {
+            Ok(v) => return Ok(v),
+            Err(e) => tokio::time::sleep(backoff(attempt)).await,
+        }
+    }
+  - |
+    loop {
+        match call() {
+            Ok(v) => return Ok(v),
+            Err(e) if attempt >= MAX_ATTEMPTS => return Err(e),
+            Err(_) => { attempt += 1; thread::sleep(delay); }
+        }
+    }
+invalid:
+  - |
+    loop {
+        match call().await {
+            Ok(v) => return Ok(v),
+            Err(_) => tokio::time::sleep(Duration::from_secs(1)).await,
+        }
+    }
+---
+id: res-retry-012-go-unbounded-retry
+valid:
+  - |
+    func f() error {
+    	for attempt := 0; attempt < maxAttempts; attempt++ {
+    		if err := call(); err == nil {
+    			return nil
+    		}
+    		time.Sleep(backoff(attempt))
+    	}
+    	return errGaveUp
+    }
+  - |
+    func poll() {
+    	for {
+    		refresh()
+    		time.Sleep(time.Second)
+    	}
+    }
+invalid:
+  - |
+    func f() error {
+    	for {
+    		if err := call(); err == nil {
+    			return nil
+    		}
+    		time.Sleep(time.Second)
+    	}
+    }
+---
+id: res-retry-012-java-unbounded-retry
+valid:
+  - |
+    for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try { return call(); } catch (IOException e) { Thread.sleep(backoff(attempt)); }
+    }
+  - |
+    while (true) {
+      try { return call(); } catch (IOException e) {
+        if (++attempt >= MAX_ATTEMPTS) throw e;
+        Thread.sleep(1000);
+      }
+    }
+invalid:
+  - |
+    while (true) {
+      try { return call(); } catch (IOException e) { Thread.sleep(1000); }
+    }

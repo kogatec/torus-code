@@ -94,3 +94,146 @@ rule:
   any:
     - pattern: eval($$$)
     - pattern: exec($$$)
+---
+id: sec-inj-003-rs-shell-string
+language: Rust
+severity: error
+message: シェル（sh -c など）に、組み立てた文字列を渡しています
+note: Command::new("git").arg("log").arg(&branch) のように、シェルを通さずにプログラムと引数を分けて渡してください。
+metadata: { principle: SEC-INJ-003 }
+utils:
+  shell-command:
+    regex: '^(\w+::)*Command::new\(\s*"(sh|bash|zsh|dash|ksh|/bin/sh|/bin/bash|/usr/bin/sh|/usr/bin/bash|cmd|cmd\.exe|powershell|pwsh)"\s*\)'
+  built-string:
+    any:
+      - kind: macro_invocation
+        has: { field: macro, regex: '^format$' }
+      - kind: identifier
+      - kind: reference_expression
+      - kind: field_expression
+      - kind: call_expression
+      - kind: binary_expression
+rule:
+  kind: call_expression
+  any:
+    - all:
+        - has:
+            field: function
+            kind: field_expression
+            all:
+              - has: { field: field, regex: '^arg$' }
+              - has: { field: value, matches: shell-command, regex: '"(-c|/C|/c|-Command)"' }
+        - has: { field: arguments, has: { matches: built-string } }
+    - all:
+        - has:
+            field: function
+            kind: field_expression
+            all:
+              - has: { field: field, regex: '^args$' }
+              - has: { field: value, matches: shell-command }
+        - has:
+            field: arguments
+            has:
+              stopBy: end
+              kind: array_expression
+              all:
+                - has: { regex: '^"(-c|/C|/c|-Command)"$' }
+                - has: { matches: built-string }
+---
+id: sec-inj-003-go-shell-string
+language: Go
+severity: error
+message: シェル（sh -c など）に、組み立てた文字列を渡しています
+note: exec.Command("git", "log", branch) のように、シェルを通さずにプログラムと引数を分けて渡してください。
+metadata: { principle: SEC-INJ-003 }
+rule:
+  kind: call_expression
+  all:
+    - has: { field: function, regex: '^exec\.(Command|CommandContext)$' }
+    - has:
+        field: arguments
+        all:
+          - has:
+              kind: interpreted_string_literal
+              regex: '^"(sh|bash|zsh|dash|ksh|/bin/sh|/bin/bash|/usr/bin/sh|/usr/bin/bash|cmd|cmd\.exe|powershell|pwsh)"$'
+          - has:
+              regex: '^"(-c|/C|/c|-Command)"$'
+              precedes:
+                stopBy: end
+                any:
+                  - kind: identifier
+                  - kind: binary_expression
+                  - kind: call_expression
+                  - kind: selector_expression
+                  - kind: index_expression
+---
+id: sec-inj-003-java-runtime-exec
+language: Java
+severity: error
+message: Runtime.exec に、組み立てた文字列を渡しています
+note: new ProcessBuilder("git", "log", branch) のように、プログラムと引数を分けて渡してください。1つの文字列で渡すと空白で区切られるため、引数を付け足されます。
+metadata: { principle: SEC-INJ-003 }
+rule:
+  kind: method_invocation
+  all:
+    - has: { field: name, regex: '^exec$' }
+    - has: { field: object, regex: '(^|\.)getRuntime\(\)$|^(runtime|rt)$' }
+    - has:
+        field: arguments
+        has:
+          nthChild: 1
+          any:
+            - kind: binary_expression
+            - kind: method_invocation
+              has: { field: name, regex: '^(format|formatted|concat|join)$' }
+---
+id: sec-inj-003-java-shell
+language: Java
+severity: error
+message: シェル（sh -c など）に、組み立てた文字列を渡しています
+note: new ProcessBuilder("git", "log", branch) のように、シェルを通さずにプログラムと引数を分けて渡してください。
+metadata: { principle: SEC-INJ-003 }
+rule:
+  any:
+    - kind: argument_list
+    - kind: array_initializer
+  all:
+    - has:
+        kind: string_literal
+        regex: '^"(sh|bash|zsh|dash|ksh|/bin/sh|/bin/bash|/usr/bin/sh|/usr/bin/bash|cmd|cmd\.exe|powershell|pwsh)"$'
+    - has:
+        kind: string_literal
+        regex: '^"(-c|/C|/c|-Command)"$'
+        precedes:
+          stopBy: end
+          any:
+            - kind: identifier
+            - kind: binary_expression
+            - kind: method_invocation
+            - kind: field_access
+---
+id: sec-inj-003-java-script-eval
+language: Java
+severity: error
+message: ScriptEngine・GroovyShell・SpEL などで、文字列をコードとして実行しています
+note: データは Jackson などで JSON として読み、処理の切り替えは Map や enum で行ってください。式の評価が必要なら、固定の式だけを使ってください。
+metadata: { principle: SEC-INJ-003 }
+rule:
+  kind: method_invocation
+  any:
+    # ScriptEngine.eval（変数の名前か getEngineBy… で、スクリプトのエンジンと分かるものだけ）
+    - all:
+        - has: { field: name, regex: '^eval$' }
+        - has: { field: object, regex: '(?i)^(\w*script|js|javascript|nashorn|graal\w*|groovy)?engine$|getEngineBy\w+\([^)]*\)$' }
+    # GroovyShell の evaluate / parse
+    - all:
+        - has: { field: name, regex: '^(evaluate|parse)$' }
+        - has: { field: object, regex: '(?i)^(groovy)?shell$|new GroovyShell\([^)]*\)$' }
+    # SpEL などの parseExpression に、固定でない式を渡す
+    - all:
+        - has: { field: name, regex: '^parseExpression$' }
+        - has:
+            field: arguments
+            has:
+              nthChild: 1
+              not: { kind: string_literal }

@@ -53,3 +53,115 @@ constraints:
   S:
     kind: string
     regex: '(?i)^[a-z]*[''"]{1,3}\s*(select\s[\s\S]*\sfrom\s|insert\s+into\s|update\s+\S+\s+set\s|delete\s+from\s)'
+---
+id: sec-inj-002-rs-sql-format
+language: Rust
+severity: error
+message: SQL を format! で組み立てています
+note: sqlx の query("... WHERE id = $1").bind(id) や rusqlite の params![...] のように、プレースホルダに値を渡してください。
+metadata: { principle: SEC-INJ-002 }
+rule:
+  kind: macro_invocation
+  all:
+    - has: { field: macro, regex: '^format$' }
+    - has:
+        kind: token_tree
+        has:
+          nthChild: 1
+          any: [ { kind: string_literal }, { kind: raw_string_literal } ]
+          regex: '(?i)^r?#*"\s*(select\s[\s\S]*\sfrom\s|insert\s+into\s|update\s+\S+\s+set\s|delete\s+from\s)[\s\S]*\{'
+---
+id: sec-inj-002-rs-sql-concat
+language: Rust
+severity: error
+message: SQL を文字列の連結で組み立てています
+note: sqlx の query("... WHERE id = $1").bind(id) や rusqlite の params![...] のように、プレースホルダに値を渡してください。
+metadata: { principle: SEC-INJ-002 }
+rule:
+  kind: binary_expression
+  pattern: $A + $B
+  all:
+    - has:
+        any: [ { kind: string_literal }, { kind: raw_string_literal } ]
+        stopBy: end
+        regex: '(?i)^r?#*"\s*(select\s[\s\S]*\sfrom\s|insert\s+into\s|update\s+\S+\s+set\s|delete\s+from\s)'
+    # 文字列リテラルだけをつないだもの（複数行に分けて書いた固定の SQL）は対象外
+    - has: { stopBy: end, kind: identifier, not: { inside: { kind: scoped_identifier } } }
+  not:
+    inside: { kind: binary_expression }
+---
+id: sec-inj-002-go-sql-sprintf
+language: Go
+severity: error
+message: SQL を fmt.Sprintf で組み立てています
+note: db.Query("... WHERE id = ?", id)（PostgreSQL なら $1）のように、プレースホルダに値を渡してください。
+metadata: { principle: SEC-INJ-002 }
+rule:
+  kind: call_expression
+  all:
+    - has: { field: function, regex: '^fmt\.Sprintf$' }
+    - has:
+        field: arguments
+        has:
+          nthChild: 1
+          any: [ { kind: interpreted_string_literal }, { kind: raw_string_literal } ]
+          regex: '(?i)^["`]\s*(select\s[\s\S]*\sfrom\s|insert\s+into\s|update\s+\S+\s+set\s|delete\s+from\s)'
+---
+id: sec-inj-002-go-sql-concat
+language: Go
+severity: error
+message: SQL を文字列の連結で組み立てています
+note: db.Query("... WHERE id = ?", id)（PostgreSQL なら $1）のように、プレースホルダに値を渡してください。
+metadata: { principle: SEC-INJ-002 }
+rule:
+  kind: binary_expression
+  pattern: $A + $B
+  all:
+    - has:
+        any: [ { kind: interpreted_string_literal }, { kind: raw_string_literal } ]
+        stopBy: end
+        regex: '(?i)^["`]\s*(select\s[\s\S]*\sfrom\s|insert\s+into\s|update\s+\S+\s+set\s|delete\s+from\s)'
+    # 文字列リテラルだけをつないだもの（複数行に分けて書いた固定の SQL）は対象外
+    - has: { stopBy: end, kind: identifier }
+  not:
+    inside: { kind: binary_expression }
+---
+id: sec-inj-002-java-sql-concat
+language: Java
+severity: error
+message: SQL を文字列の連結で組み立てています
+note: PreparedStatement の ? に setString / setLong で値を渡すか、JPA の名前付きパラメータ（:name）・クエリビルダーを使ってください。
+metadata: { principle: SEC-INJ-002 }
+rule:
+  kind: binary_expression
+  pattern: $A + $B
+  all:
+    - has:
+        kind: string_literal
+        stopBy: end
+        regex: '(?i)^"{1,3}\s*(select\s[\s\S]*\sfrom\s|insert\s+into\s|update\s+\S+\s+set\s|delete\s+from\s)'
+    # 文字列リテラルだけをつないだもの（複数行に分けて書いた固定の SQL）は対象外
+    - has: { stopBy: end, kind: identifier }
+  not:
+    inside: { kind: binary_expression }
+---
+id: sec-inj-002-java-sql-format
+language: Java
+severity: error
+message: SQL を String.format / formatted で組み立てています
+note: PreparedStatement の ? に setString / setLong で値を渡すか、JPA の名前付きパラメータ（:name）・クエリビルダーを使ってください。
+metadata: { principle: SEC-INJ-002 }
+utils:
+  sql-literal:
+    kind: string_literal
+    regex: '(?i)^"{1,3}\s*(select\s[\s\S]*\sfrom\s|insert\s+into\s|update\s+\S+\s+set\s|delete\s+from\s)'
+rule:
+  kind: method_invocation
+  any:
+    - all:
+        - has: { field: object, regex: '^String$' }
+        - has: { field: name, regex: '^format$' }
+        - has: { field: arguments, has: { nthChild: 1, matches: sql-literal } }
+    - all:
+        - has: { field: object, matches: sql-literal }
+        - has: { field: name, regex: '^formatted$' }

@@ -120,6 +120,21 @@ test("Write で SQL の埋め込みを書くと block する", () => {
   assert.equal(edit.new[0].blocking, true);
 });
 
+test("Rust・Go・Java・JavaScript のファイルでも、必須の違反を書くと block する", () => {
+  const { root } = setupProject();
+  const files: [string, string][] = [
+    ["src/repo.rs", 'fn find(id: &str) -> String {\n    format!("SELECT * FROM users WHERE id = {}", id)\n}\n'],
+    ["repo/repo.go", 'package repo\n\nfunc find(id string) string {\n\treturn "SELECT * FROM users WHERE id = " + id\n}\n'],
+    ["src/Repo.java", 'class Repo {\n  String find(String id) { return "SELECT * FROM users WHERE id = " + id; }\n}\n'],
+    ["web/repo.js", "export const find = (id) => db.query(`SELECT * FROM users WHERE id = ${id}`);\n"],
+  ];
+  for (const [rel, content] of files) {
+    const { post } = writeFile(root, "s1", rel, content);
+    assert.ok(isBlock(post), rel);
+    assert.ok(json(post).reason.includes("[SEC-INJ-002]"), rel);
+  }
+});
+
 test("直したら block しない", () => {
   const { root } = setupProject();
   writeFile(root, "s1", "src/repo.ts", SQL_VIOLATION);

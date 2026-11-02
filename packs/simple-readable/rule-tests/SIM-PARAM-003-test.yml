@@ -27,3 +27,30 @@ invalid:
     class Users:
         def create(self, name, email, role, team, active):
             pass
+---
+id: sim-param-003-rs-many-params
+valid:
+  - 'fn create_user(input: NewUser) -> User { todo!() }'
+  - 'fn update(&self, a: i32, b: i32, c: i32, d: i32) {}'
+invalid:
+  - 'fn create_user(name: &str, email: &str, role: Role, team: TeamId, active: bool) -> User { todo!() }'
+---
+id: sim-param-003-go-many-params
+valid:
+  - 'func CreateUser(in NewUser) User { return User{} }'
+  - 'func Scale(x, y, z int) int { return x * y * z }'
+invalid:
+  - 'func CreateUser(name, email string, role Role, team TeamID, active bool) User { return User{} }'
+---
+id: sim-param-003-java-many-params
+valid:
+  - |
+    class UserService {
+      User createUser(NewUser input) { return null; }
+      UserService(Repo a, Mailer b, Clock c, Audit d, Config e) {}
+    }
+invalid:
+  - |
+    class UserService {
+      User createUser(String name, String email, Role role, long team, boolean active) { return null; }
+    }

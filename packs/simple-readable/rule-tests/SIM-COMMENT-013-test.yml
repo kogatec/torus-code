@@ -21,3 +21,26 @@ invalid:
   - "# total = sum(items)"
   - "# import pdb"
   - "# if user.is_admin:"
+---
+id: sim-comment-013-rs-commented-out-code
+valid:
+  - '// 退会済みユーザーも返す（請求履歴の表示に必要なため）'
+  - '/// 税込価格を返す。'
+invalid:
+  - '// let total = subtotal + tax;'
+  - '// println!("debug {}", total);'
+---
+id: sim-comment-013-go-commented-out-code
+valid:
+  - '// WithTax は税込価格を返す。'
+  - '//go:generate stringer -type=Pill'
+invalid:
+  - '// total := subtotal + tax'
+  - '// fmt.Println(total)'
+---
+id: sim-comment-013-java-commented-out-code
+valid:
+  - '// 退会済みユーザーも返す（請求履歴の表示に必要なため）'
+invalid:
+  - '// int total = subtotal + tax;'
+  - '// System.out.println(total);'

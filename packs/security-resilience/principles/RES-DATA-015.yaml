@@ -5,7 +5,7 @@ summary: 複数の書き込みはトランザクションでまとめ、外部�
 level: default
 styles: { security_resilience: 1.0, type_safety: 0.5 }
 applies_when:
-  languages: [typescript, python]
+  languages: [typescript, javascript, python, rust, go, java]
   layers: [service, data_access]
 not_when: []
 rationale: >

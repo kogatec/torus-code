@@ -19,3 +19,45 @@ rule:
   regex: '^#\s*(?:(?:def|class)\s+\w+.*:\s*$|import\s+[\w.]+\s*$|from\s+[\w.]+\s+import\s|print\(|(?:if|elif|while)\s.*:\s*$|for\s+\w+\s+in\s.*:\s*$|else:\s*$|[\w.\[\]]+\s*=\s*[\w\[{(''"].*$|[\w.]+\([^)]*\)\s*$)'
   not:
     regex: '^#\s*(type:|noqa|pragma|fmt:|pylint:|mypy:|!|-\*-)'
+---
+id: sim-comment-013-rs-commented-out-code
+language: Rust
+severity: info
+message: コメントアウトしたコードが残っています
+note: 古いコードは git の履歴に残っているので、消してください。残す理由があるなら、その理由を文章で書いてください。
+metadata: { principle: SIM-COMMENT-013 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  kind: line_comment
+  regex: '^//\s*(?:let\s+(?:mut\s+)?\w+.*=.*;\s*$|(?:pub\s+)?fn\s+\w+\s*[(<]|use\s+[\w:{}, *]+;\s*$|return\b.*;\s*$|(?:if|while|for|match)\s.*\{\s*$|[\w.:\[\]]+!?\([^)]*\);\s*$|[\w.\[\]]+\s*[+\-*/]?=[^=>].*;\s*$|\}\s*$)'
+  not: { matches: in-test-module }
+---
+id: sim-comment-013-go-commented-out-code
+language: Go
+severity: info
+message: コメントアウトしたコードが残っています
+note: 古いコードは git の履歴に残っているので、消してください。残す理由があるなら、その理由を文章で書いてください。
+metadata: { principle: SIM-COMMENT-013 }
+rule:
+  kind: comment
+  regex: '^//\s*(?:[A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*\s*:=|var\s+[A-Za-z_]\w*\s|func\s+(?:\([^)]*\)\s*)?[A-Za-z_]\w*\(|(?:if|for|switch)\s.*\{\s*$|[A-Za-z_][A-Za-z0-9_.]*\([^)]*\)\s*$|[A-Za-z_][A-Za-z0-9_.\[\]]*\s*=[^=].*$|\}\s*$)'
+  not:
+    regex: '^//(go:|nolint|export |line |\t| \+build)'
+---
+id: sim-comment-013-java-commented-out-code
+language: Java
+severity: info
+message: コメントアウトしたコードが残っています
+note: 古いコードは git の履歴に残っているので、消してください。残す理由があるなら、その理由を文章で書いてください。
+metadata: { principle: SIM-COMMENT-013 }
+rule:
+  kind: line_comment
+  regex: '^//\s*(?:(?:final\s+)?[A-Za-z_][\w<>\[\],.? ]*\s+[A-Za-z_]\w*\s*=[^=].*;\s*$|return\b[^;]*;\s*$|import\s+[\w.*]+;\s*$|(?:if|for|while)\s*\(.*\)\s*\{?\s*$|[\w.$\[\]]+\([^)]*\);\s*$|[\w.$\[\]]+\s*=[^=>].*;\s*$|\}\s*$)'

@@ -1,5 +1,5 @@
 id: maintainable
-version: 0.1.2
+version: 0.2.0
 name: 保守性・長期運用重視型
 description: 何年も、人が入れ替わっても、安全に変更し続けられるコードを書く
 values: [責務の分離, 依存の管理, テストの充実, 後方互換性, 判断の記録]
@@ -10,7 +10,7 @@ suited_for:
 tradeoffs:
   - テスト・型・文書の分だけ、最初の実装には時間がかかる
   - "構造を先に整えるため、試作段階では過剰になりやすい（phase: prototype では advisory の原則と info の検査を外す）"
-languages: [typescript, python]
+languages: [typescript, javascript, python, rust, go, java]
 
 # このパックに mandatory の原則はない。違反は AI に知らせるが、止めない
 enforcement:
@@ -48,6 +48,6 @@ requires:
   optional: [tsc, mypy, dependency-cruiser, import-linter, diff-cover, api-extractor, griffe, npm-audit, pip-audit]
 
 verification:
-  rule_tests: 静的ルール32本すべて、テストケース（検出すべき例・検出してはいけない例）を通過（ast-grep 0.45.3）
+  rule_tests: 静的ルール74本すべて、テストケース（検出すべき例・検出してはいけない例）を通過（ast-grep 0.45.3）
   effect: 未評価（評価の仕組みを作ってから測る）
   evidence: ESLint・Pylint など既存ツールの対応ルールへの参照のみ。リポジトリからの根拠は Phase 3 で付ける

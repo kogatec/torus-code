@@ -26,3 +26,20 @@ rule:
     - kind: identifier
       matches: builtin-name
       inside: { kind: default_parameter, field: name }
+---
+id: sim-scope-015-go-shadow-builtin
+language: Go
+severity: warning
+message: 組み込みの名前（len / new / string / error など）を変数名に使っています
+note: 組み込みの関数や型が隠れ、読む人も混乱します。length / count のように中身が分かる名前にしてください。
+metadata: { principle: SIM-SCOPE-015 }
+utils:
+  builtin-name:
+    regex: '^(append|cap|clear|close|complex|copy|delete|imag|len|make|max|min|new|panic|print|println|real|recover|string|error|bool|byte|rune|int|int8|int16|int32|int64|uint|uint8|uint16|uint32|uint64|uintptr|float32|float64|complex64|complex128|any|comparable|true|false|nil|iota)$'
+rule:
+  kind: identifier
+  matches: builtin-name
+  any:
+    - inside: { kind: expression_list, inside: { kind: short_var_declaration, field: left } }
+    - inside: { kind: var_spec, field: name }
+    - inside: { kind: parameter_declaration, field: name }

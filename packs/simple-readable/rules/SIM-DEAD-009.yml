@@ -46,3 +46,56 @@ rule:
       - kind: while_statement
       - kind: try_statement
       - kind: with_statement
+---
+id: sim-dead-009-rs-unreachable
+language: Rust
+severity: warning
+message: return / break / continue / panic! の後に、実行されないコードがあります
+note: 実行されないコードは消してください。
+metadata: { principle: SIM-DEAD-009 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  kind: expression_statement
+  any:
+    - has: { any: [ { kind: return_expression }, { kind: break_expression }, { kind: continue_expression } ] }
+    - has: { kind: macro_invocation, has: { field: macro, regex: '^(panic|unreachable|todo|unimplemented)$' } }
+  precedes:
+    regex: '^[^}/]'
+  not: { matches: in-test-module }
+---
+id: sim-dead-009-go-unreachable
+language: Go
+severity: warning
+message: return / break / continue / panic の後に、実行されないコードがあります
+note: 実行されないコードは消してください。
+metadata: { principle: SIM-DEAD-009 }
+rule:
+  any:
+    - kind: return_statement
+    - kind: break_statement
+    - kind: continue_statement
+    - kind: goto_statement
+    - kind: expression_statement
+      regex: '^panic\('
+  precedes:
+    any:
+      - kind: expression_statement
+      - kind: short_var_declaration
+      - kind: assignment_statement
+      - kind: var_declaration
+      - kind: if_statement
+      - kind: for_statement
+      - kind: return_statement
+      - kind: expression_switch_statement
+      - kind: go_statement
+      - kind: defer_statement
+      - kind: inc_statement
+      - kind: dec_statement

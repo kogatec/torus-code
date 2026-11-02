@@ -36,3 +36,84 @@ metadata: { principle: SIM-STD-014 }
 rule:
   kind: comparison_operator
   regex: '(==|!=)\s*(None|True|False)$'
+---
+id: sim-std-014-rs-index-loop
+language: Rust
+severity: info
+message: 添字で配列を回すループです
+note: for item in &items か、添字も必要なら items.iter().enumerate() を使ってください。
+metadata: { principle: SIM-STD-014 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  kind: for_expression
+  has: { field: value, regex: '^0\s*\.\.\s*[\w.]+\.len\(\)$' }
+  not: { matches: in-test-module }
+---
+id: sim-std-014-rs-bool-compare
+language: Rust
+severity: info
+message: 真偽値を true / false と比べています
+note: if is_ready や if !is_ready のように、そのまま使ってください。
+metadata: { principle: SIM-STD-014 }
+utils:
+  in-test-module:
+    inside:
+      stopBy: end
+      kind: mod_item
+      follows:
+        stopBy: { not: { kind: attribute_item } }
+        kind: attribute_item
+        regex: '^#\[cfg\(test\)\]$'
+rule:
+  kind: binary_expression
+  regex: '[!=]=\s*(true|false)$|^(true|false)\s*[!=]='
+  not: { matches: in-test-module }
+---
+id: sim-std-014-go-index-loop
+language: Go
+severity: info
+message: 添字でスライスを回すループです
+note: for _, item := range items か、添字も必要なら for i, item := range items を使ってください。
+metadata: { principle: SIM-STD-014 }
+rule:
+  kind: for_clause
+  regex: '^(\w+)\s*:=\s*0\s*;\s*\w+\s*<\s*len\([\w.]+\)\s*;\s*\w+\+\+$'
+---
+id: sim-std-014-go-bool-compare
+language: Go
+severity: info
+message: 真偽値を true / false と比べています
+note: if isReady や if !isReady のように、そのまま使ってください。
+metadata: { principle: SIM-STD-014 }
+rule:
+  kind: binary_expression
+  regex: '[!=]=\s*(true|false)$|^(true|false)\s*[!=]='
+---
+id: sim-std-014-java-index-loop
+language: Java
+severity: info
+message: 添字でリスト・配列を回すループです
+note: '拡張 for 文（for (Item item : items)）か、Stream の map / filter を使ってください。'
+metadata: { principle: SIM-STD-014 }
+rule:
+  any:
+    - pattern: for (int $I = 0; $I < $A.size(); $I++) $BODY
+    - pattern: for (int $I = 0; $I < $A.length; $I++) $BODY
+---
+id: sim-std-014-java-bool-compare
+language: Java
+severity: info
+message: 真偽値を true / false と比べています
+note: if (isReady) や if (!isReady) のように、そのまま使ってください。
+metadata: { principle: SIM-STD-014 }
+rule:
+  kind: binary_expression
+  regex: '[!=]=\s*(true|false)$|^(true|false)\s*[!=]='

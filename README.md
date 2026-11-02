@@ -25,7 +25,7 @@ This directory is the plugin itself.
 claude --plugin-dir /path/to/torus-code
 ```
 
-The first time you send a message in a code folder that is not configured yet (a git repository, or a TypeScript / Python project), Claude asks you once, before working on your request, which design style to use (primary, secondary, and phase). If you choose "not now", you will not be asked again in that project. The fact that you were asked is recorded in `~/.torus-code/first-run.json`, not in your repository. You are never asked in your home directory itself or in folders without code.
+The first time you send a message in a code folder that is not configured yet (a git repository, or a project in one of the [supported languages](#supported-languages)), Claude asks you once, before working on your request, which design style to use (primary, secondary, and phase). If you choose "not now", you will not be asked again in that project. The fact that you were asked is recorded in `~/.torus-code/first-run.json`, not in your repository. You are never asked in your home directory itself or in folders without code.
 
 To set up or change the configuration later, use these commands:
 
@@ -72,13 +72,31 @@ Run `bin/torus help` for all commands. Inside Claude Code, the plugin's `bin/` i
 
 | Pack | Principles | Static rules | Mandatory |
 |---|---|---|---|
-| `security-resilience` (security and resilience first) | 15 | 42 | 9 |
-| `simple-readable` (simplicity and readability first) | 15 | 30 | 0 |
-| `maintainable` (maintainability and long-term operation first) | 15 | 32 | 0 |
+| `security-resilience` (security and resilience first) | 15 | 102 | 9 |
+| `simple-readable` (simplicity and readability first) | 15 | 67 | 0 |
+| `maintainable` (maintainability and long-term operation first) | 15 | 74 | 0 |
 
 - Mandatory principles cannot be turned off, whichever style you choose. They also apply when another pack is primary and `security-resilience` is a secondary style.
-- Checks run on ast-grep and support TypeScript (`.ts`, `.tsx`) and Python. JavaScript is not supported yet.
 - Every rule has tests with examples that must and must not be detected (`npm run test:rules`).
+
+### Supported languages
+
+Checks run on ast-grep.
+
+| Language | Files | Test code (the readability pack does not check it) |
+|---|---|---|
+| TypeScript | `.ts`, `.tsx`, `.mts`, `.cts` | `*.test.ts`, `*.spec.ts`, `tests/` |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | `*.test.js`, `*.spec.js`, `tests/` |
+| Python | `.py`, `.pyi` | `test_*.py`, `*_test.py`, `tests/` |
+| Rust | `.rs` | `#[cfg(test)]` modules, `tests/` |
+| Go | `.go` | `*_test.go`, `tests/` |
+| Java | `.java` | `src/test/`, `tests/` |
+
+- JavaScript is checked with the TypeScript rules (parsed as TSX), so checks about types, such as `any`, never fire.
+- The new languages take effect through the packs. A project whose `.torus/packs` still holds older packs (without `javascript` in `languages` and without rules for Rust, Go, or Java) keeps its previous checks after a plugin update, until you run `torus update`.
+- Rules are written for each language's own idioms (for example, SQL built with `format!` in Rust, `fmt.Sprintf` in Go, and string concatenation in Java), so the number of rules for a principle differs by language. Unsafe deserialization is checked only in TypeScript, Python, and Java, because the common Rust and Go decoders do not run code taken from the data.
+- Dependencies and build outputs (`node_modules`, `dist`, `build`, and Python virtual environments) and minified `*.min.js` files are not checked. `target` is skipped only when it sits next to `Cargo.toml`, `pom.xml`, or `build.gradle`, and `vendor` only when it sits next to `go.mod`, so your own code in a folder with one of these names is still checked.
+- When a single file is checked (after each edit), only the rules for that file's language are loaded.
 
 ## Configuration files (`.torus/`)
 
@@ -120,6 +138,7 @@ sh scripts/smoke-plugin.sh  # check that the hooks run in real Claude Code (in a
 ## Limitations
 
 - Static checks only find problems written directly in a single expression (they may miss problems that go through a variable). The reviewer agent and the L1 review points cover the rest.
+- The evaluation tasks are TypeScript and Python only, so the effect of the rules for Rust, Go, Java, and JavaScript has not been measured yet.
 - Thresholds (such as 60 lines per function) are written directly in the rules. To change them, edit the rules in `.torus/packs/` and run `torus lock`.
 - The evidence behind the principles is currently limited to references to CWE and existing linter rules. Extraction from public repositories (Phase 3 in the design document) is not implemented yet.
 

@@ -4,7 +4,7 @@ title: 公開している API は互換性を守り、壊すときは移行期�
 summary: 公開 API・データ形式を変えるときは後方互換を保ち、壊すなら非推奨の期間と移行手順を用意する
 level: default
 styles: { maintainable: 1.0, extensibility: 0.8 }
-applies_when: { languages: [typescript, python], layers: [api_handler, library, data_schema] }
+applies_when: { languages: [typescript, javascript, python, rust, go, java], layers: [api_handler, library, data_schema] }
 not_when:
   - まだ誰にも公開していない API
 rationale: >

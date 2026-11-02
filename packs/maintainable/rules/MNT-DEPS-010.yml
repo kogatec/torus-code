@@ -34,3 +34,47 @@ metadata: { principle: MNT-DEPS-010 }
 rule:
   kind: import_from_statement
   regex: '^from\s+typing\s+import\s[\s\S]*\b(List|Dict|Set|Tuple|FrozenSet|Type|DefaultDict|Deque)\b'
+---
+id: mnt-deps-010-rs-deprecated-api
+language: Rust
+severity: warning
+message: 非推奨の API を使っています
+note: 'mem::uninitialized → MaybeUninit、trim_left / trim_right → trim_start / trim_end、ONCE_INIT / ATOMIC_*_INIT → Once::new() / AtomicUsize::new(0) など、spin_loop_hint → std::hint::spin_loop に置き換えてください。'
+metadata: { principle: MNT-DEPS-010 }
+rule:
+  any:
+    - kind: call_expression
+      has: { field: function, regex: '(^|::)(mem::uninitialized|spin_loop_hint)$|\.(trim_left|trim_right|trim_left_matches|trim_right_matches)$' }
+    - kind: identifier
+      regex: '^(ONCE_INIT|ATOMIC_(BOOL|ISIZE|USIZE)_INIT)$'
+      not: { inside: { kind: use_declaration, stopBy: end } }
+---
+id: mnt-deps-010-go-deprecated-api
+language: Go
+severity: warning
+message: 非推奨の API を使っています
+note: 'ioutil.ReadFile → os.ReadFile、ioutil.ReadAll → io.ReadAll（ほかの ioutil も os / io へ）、strings.Title → golang.org/x/text/cases、rand.Seed → 不要（Go 1.20 以降は自動で初期化）か rand.New に置き換えてください。'
+metadata: { principle: MNT-DEPS-010 }
+rule:
+  any: [ { kind: selector_expression }, { kind: qualified_type } ]
+  regex: '^(ioutil\.\w+|strings\.Title|rand\.Seed|reflect\.(SliceHeader|StringHeader)|os\.SEEK_(SET|CUR|END)|x509\.(IsEncryptedPEMBlock|DecryptPEMBlock|EncryptPEMBlock))$'
+---
+id: mnt-deps-010-java-deprecated-api
+language: Java
+severity: warning
+message: 非推奨の API を使っています
+note: 'new Integer(x) など → Integer.valueOf(x)、Class.newInstance() → getDeclaredConstructor().newInstance()、finalize → try-with-resources か Cleaner に置き換えてください。'
+metadata: { principle: MNT-DEPS-010 }
+rule:
+  any:
+    - kind: object_creation_expression
+      has: { field: type, regex: '^(Integer|Long|Short|Byte|Double|Float|Boolean|Character)$' }
+    - kind: method_invocation
+      all:
+        - has: { field: name, regex: '^newInstance$' }
+        - has: { field: arguments, regex: '^\(\s*\)$' }
+        - has: { field: object, regex: '\.class$|getClass\(\)$|^Class\.forName\(' }
+    - kind: method_declaration
+      all:
+        - has: { field: name, regex: '^finalize$' }
+        - has: { field: parameters, regex: '^\(\s*\)$' }

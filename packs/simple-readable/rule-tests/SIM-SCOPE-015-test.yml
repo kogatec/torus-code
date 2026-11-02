@@ -19,3 +19,10 @@ invalid:
   - |
     def show(type="text"):
         pass
+---
+id: sim-scope-015-go-shadow-builtin
+valid:
+  - 'func f(items []int) { length := len(items); _ = length }'
+invalid:
+  - 'func f(items []int) { len := len(items); _ = len }'
+  - 'func f(new bool) {}'

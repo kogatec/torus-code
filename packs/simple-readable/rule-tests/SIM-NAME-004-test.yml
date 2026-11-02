@@ -17,3 +17,25 @@ invalid:
   - d = datetime.now()
   - tmp = load()
   - result2 = merge(a, b)
+---
+id: sim-name-004-rs-vague-name
+valid:
+  - 'let unpaid_orders: Vec<_> = orders.iter().filter(|o| !o.paid).collect();'
+  - 'let x = point.x;'
+invalid:
+  - 'let tmp: Vec<_> = orders.iter().filter(|o| !o.paid).collect();'
+  - 'let d = load();'
+---
+id: sim-name-004-go-vague-name
+valid:
+  - 'func f() { r := bufio.NewReader(file); _ = r }'
+  - 'func f() { unpaid := filterUnpaid(orders); _ = unpaid }'
+invalid:
+  - 'func f() { tmp := filterUnpaid(orders); _ = tmp }'
+  - 'func f() { data2 := load(); _ = data2 }'
+---
+id: sim-name-004-java-vague-name
+valid:
+  - 'List<Order> unpaidOrders = filterUnpaid(orders);'
+invalid:
+  - 'List<Order> tmp = filterUnpaid(orders);'

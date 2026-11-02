@@ -21,3 +21,68 @@ rule:
   has:
     kind: call
     has: { field: function, regex: '(^asyncio\.|\.)(create_task|ensure_future)$|^(create_task|ensure_future)$' }
+---
+id: res-async-013-rs-detached-task
+language: Rust
+severity: warning
+message: spawn したタスク・スレッドの JoinHandle を捨てています
+note: JoinHandle を保持して await / join し、失敗（panic・エラー）を処理してください。数が多いなら tokio::task::JoinSet で管理できます。
+metadata: { principle: RES-ASYNC-013 }
+rule:
+  kind: expression_statement
+  has:
+    kind: call_expression
+    has: { field: function, regex: '^((tokio|async_std|smol)::)?(task::)?spawn(_blocking|_local)?$|^(std::)?thread::spawn$' }
+---
+id: res-async-013-go-wg-add-in-goroutine
+language: Go
+severity: warning
+message: goroutine の中で WaitGroup.Add を呼んでいます
+note: Add は go 文の前に呼んでください。goroutine の中で呼ぶと、Add より先に Wait が終わることがあります（Go 1.25 以降は wg.Go も使えます）。
+metadata: { principle: RES-ASYNC-013 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '^(\w+\.)*(wg|waitGroup|waitgroup|\w+Wg|\w+WG|\w+WaitGroup)\.Add$' }
+  inside:
+    stopBy: end
+    kind: func_literal
+    inside: { kind: call_expression, inside: { kind: go_statement } }
+---
+id: res-async-013-go-errgroup-without-wait
+language: Go
+severity: warning
+message: errgroup の Go で始めた処理を Wait で待っていません
+note: g.Wait() で終わりを待ち、返ってきたエラーを処理してください。
+metadata: { principle: RES-ASYNC-013 }
+rule:
+  kind: call_expression
+  has:
+    field: function
+    kind: selector_expression
+    all:
+      - has: { field: field, regex: '^Go$' }
+      - has: { field: operand, kind: identifier, pattern: $G }
+  inside:
+    stopBy: end
+    any: [ { kind: function_declaration }, { kind: method_declaration }, { kind: func_literal } ]
+    all:
+      - regex: 'errgroup\.'
+      - not: { has: { stopBy: end, kind: call_expression, pattern: $G.Wait() } }
+---
+id: res-async-013-java-dropped-future
+language: Java
+severity: warning
+message: 非同期処理（CompletableFuture・submit）の結果を捨てています
+note: 戻り値の Future を保持して結果と例外を確かめるか、exceptionally / whenComplete で失敗を記録してください。submit した処理の例外は、Future を確かめないと消えます。
+metadata: { principle: RES-ASYNC-013 }
+rule:
+  kind: expression_statement
+  has:
+    kind: method_invocation
+    any:
+      - all:
+          - regex: '^CompletableFuture\.(runAsync|supplyAsync)\('
+          - not: { regex: '\.(exceptionally|handle|whenComplete|join|get)\(' }
+      - all:
+          - has: { field: name, regex: '^submit$' }
+          - has: { field: object, regex: '(?i)(executor|pool|service)\w*$' }

@@ -5,7 +5,7 @@ summary: 権限はサーバー側で毎回確かめ、既定は拒否、確認�
 level: mandatory
 styles: { security_resilience: 1.0 }
 applies_when:
-  languages: [typescript, python]
+  languages: [typescript, javascript, python, rust, go, java]
   layers: [api_handler, service]
 not_when: []
 rationale: >

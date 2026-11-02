@@ -1,5 +1,5 @@
 id: security-resilience
-version: 0.1.2
+version: 0.2.0
 name: セキュリティ・障害耐性重視型
 description: 攻撃と障害の両方に対して、壊れにくく、壊れても被害が広がらないコードを書く
 values: [入力の検証, 秘密情報の保護, 最小権限, 障害の封じ込め, データの整合性]
@@ -10,7 +10,7 @@ suited_for:
 tradeoffs:
   - 入口での検証や失敗時の処理が増えるため、コード量は増える
   - "試作段階では過剰に感じることがある（phase: prototype では advisory の原則と info の検査を外す）"
-languages: [typescript, python]
+languages: [typescript, javascript, python, rust, go, java]
 
 # 何を止め、何を知らせるか
 enforcement:
@@ -41,6 +41,6 @@ requires:
   eslint: optional   # RES-ASYNC-013 の型を使う検査だけで使う
 
 verification:
-  rule_tests: 静的ルール42本すべて、テストケース（検出すべき例・検出してはいけない例）を通過（ast-grep 0.45.3）
+  rule_tests: 静的ルール102本すべて、テストケース（検出すべき例・検出してはいけない例）を通過（ast-grep 0.45.3）
   effect: 未評価（評価の仕組みを作ってから測る）
   evidence: CWE など標準への参照のみ。リポジトリからの根拠は Phase 3 で付ける

@@ -41,3 +41,78 @@ rule:
     stopBy: end
     kind: function_definition
     has: { field: name, regex: '^test_' }
+---
+id: mnt-test-004-rs-ignore-without-reason
+language: Rust
+severity: warning
+message: 理由のない #[ignore] があります
+note: '#[ignore = "理由"] のように理由を書いてください。いつまでに直すか（課題番号）も書いてください。'
+metadata: { principle: MNT-TEST-004 }
+rule:
+  kind: attribute_item
+  regex: '^#\[ignore\]$'
+---
+id: mnt-test-004-rs-sleep-in-test
+language: Rust
+severity: warning
+message: テストの中で sleep しています
+note: 時間に頼るテストは遅く、ときどき失敗します。時刻は差し替え（tokio::time::pause など）、非同期処理は完了を待つ仕組み（チャネルや join）を使ってください。
+metadata: { principle: MNT-TEST-004 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '(^|::)sleep$' }
+  inside:
+    stopBy: end
+    kind: function_item
+    follows:
+      stopBy: { not: { kind: attribute_item } }
+      kind: attribute_item
+      regex: '^#\[(\w+::)?test\b'
+---
+id: mnt-test-004-go-skip-without-reason
+language: Go
+severity: warning
+message: 理由のない t.Skip / t.SkipNow があります
+note: t.Skip("理由") のように理由を書いてください。いつまでに直すか（課題番号）も書いてください。
+metadata: { principle: MNT-TEST-004 }
+rule:
+  kind: call_expression
+  regex: '^t\.(Skip|SkipNow)\(\s*\)$'
+---
+id: mnt-test-004-go-sleep-in-test
+language: Go
+severity: warning
+message: テストの中で sleep しています
+note: 時間に頼るテストは遅く、ときどき失敗します。時刻は差し替え（時計を引数で渡すなど）、非同期処理は完了を待つ仕組み（チャネルや sync.WaitGroup）を使ってください。
+metadata: { principle: MNT-TEST-004 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '^time\.Sleep$' }
+  inside:
+    stopBy: end
+    kind: function_declaration
+    has: { field: name, regex: '^Test' }
+---
+id: mnt-test-004-java-disabled-without-reason
+language: Java
+severity: warning
+message: 理由のない @Disabled / @Ignore があります
+note: '@Disabled("理由") のように理由を書いてください。いつまでに直すか（課題番号）も書いてください。'
+metadata: { principle: MNT-TEST-004 }
+rule:
+  kind: marker_annotation
+  regex: '^@(Disabled|Ignore)$'
+---
+id: mnt-test-004-java-sleep-in-test
+language: Java
+severity: warning
+message: テストの中で sleep しています
+note: 時間に頼るテストは遅く、ときどき失敗します。時刻は Clock を差し替え、非同期処理は完了を待つ仕組み（Awaitility など）を使ってください。
+metadata: { principle: MNT-TEST-004 }
+rule:
+  kind: method_invocation
+  regex: '^(Thread|TimeUnit\.\w+)\.sleep\('
+  inside:
+    stopBy: end
+    kind: method_declaration
+    has: { kind: modifiers, has: { regex: '^@(Test|ParameterizedTest|RepeatedTest)\b' } }

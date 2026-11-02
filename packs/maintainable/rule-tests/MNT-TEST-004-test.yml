@@ -40,3 +40,79 @@ invalid:
         start()
         time.sleep(2)
         assert ready()
+---
+id: mnt-test-004-rs-ignore-without-reason
+valid:
+  - |
+    #[test]
+    #[ignore = "外部の決済 API が必要なため（PAY-42）"]
+    fn charges_card() {}
+invalid:
+  - |
+    #[test]
+    #[ignore]
+    fn charges_card() {}
+---
+id: mnt-test-004-rs-sleep-in-test
+valid:
+  - 'fn wait_for_ready() { std::thread::sleep(DELAY); }'
+invalid:
+  - |
+    #[test]
+    fn processes_job() {
+        start();
+        std::thread::sleep(Duration::from_secs(2));
+        assert!(done());
+    }
+---
+id: mnt-test-004-go-skip-without-reason
+valid:
+  - 'func TestCharge(t *testing.T) { t.Skip("外部の決済 API が必要なため（PAY-42）") }'
+invalid:
+  - 'func TestCharge(t *testing.T) { t.Skip() }'
+---
+id: mnt-test-004-go-sleep-in-test
+valid:
+  - 'func waitReady() { time.Sleep(delay) }'
+invalid:
+  - |
+    func TestProcess(t *testing.T) {
+    	start()
+    	time.Sleep(2 * time.Second)
+    	if !done() {
+    		t.Fatal("not done")
+    	}
+    }
+---
+id: mnt-test-004-java-disabled-without-reason
+valid:
+  - |
+    class PaymentTest {
+      @Disabled("外部の決済 API が必要なため（PAY-42）")
+      @Test
+      void charges() {}
+    }
+invalid:
+  - |
+    class PaymentTest {
+      @Disabled
+      @Test
+      void charges() {}
+    }
+---
+id: mnt-test-004-java-sleep-in-test
+valid:
+  - |
+    class Poller {
+      void waitReady() throws InterruptedException { Thread.sleep(delay); }
+    }
+invalid:
+  - |
+    class JobTest {
+      @Test
+      void processes() throws Exception {
+        start();
+        Thread.sleep(2000);
+        assertTrue(done());
+      }
+    }

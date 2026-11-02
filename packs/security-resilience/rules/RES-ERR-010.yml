@@ -52,3 +52,58 @@ metadata: { principle: RES-ERR-010 }
 rule:
   kind: except_clause
   regex: '^except\s*:'
+---
+id: res-err-010-rs-empty-err-arm
+language: Rust
+severity: error
+message: Err の分岐で何もせず、エラーを握りつぶしています
+note: ログに残す、? や return Err で呼び出し元へ返す、利用者に知らせる、のどれかをしてください。無視が正しいなら、理由をコメントに書いてください。
+metadata: { principle: RES-ERR-010 }
+rule:
+  kind: match_arm
+  all:
+    - has: { field: pattern, regex: '^Err\s*\(' }
+    - has: { field: value, regex: '^(\{\s*\}|\(\s*\))$' }
+---
+id: res-err-010-go-empty-err-check
+language: Go
+severity: error
+message: if err != nil の中で何もせず、エラーを握りつぶしています
+note: ログに残す、return でエラーを返す（fmt.Errorf で文脈を付ける）、利用者に知らせる、のどれかをしてください。無視が正しいなら、理由をコメントに書いてください。
+metadata: { principle: RES-ERR-010 }
+rule:
+  kind: if_statement
+  all:
+    - has: { field: condition, regex: '^\w*[eE]rr\w*\s*!=\s*nil$' }
+    - has: { field: consequence, regex: '^\{\s*\}$' }
+---
+id: res-err-010-go-discarded-recover
+language: Go
+severity: warning
+message: recover() の戻り値を捨てて、panic を握りつぶしています
+note: 戻り値を受け取り、ログに残してエラーとして返してください。
+metadata: { principle: RES-ERR-010 }
+rule:
+  kind: expression_statement
+  regex: '^recover\(\)$'
+---
+id: res-err-010-java-empty-catch
+language: Java
+severity: error
+message: catch ブロックが空で、エラーを握りつぶしています
+note: ログに残す、呼び出し元へ投げ直す、利用者に知らせる、のどれかをしてください。無視が正しいなら、理由をコメントに書いてください。
+metadata: { principle: RES-ERR-010 }
+rule:
+  kind: block
+  regex: '^\{\s*\}$'
+  inside: { kind: catch_clause, field: body }
+---
+id: res-err-010-java-catch-throwable
+language: Java
+severity: warning
+message: Throwable / Error を catch しています（OutOfMemoryError なども捕まえます）
+note: 捕まえる例外の型を書いてください（広く捕まえるなら Exception）。
+metadata: { principle: RES-ERR-010 }
+rule:
+  kind: catch_type
+  regex: '(^|\|\s*)(java\.lang\.)?(Throwable|Error)(\s*\||$)'

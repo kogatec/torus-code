@@ -20,3 +20,16 @@ valid:
 invalid:
   - const serialize = require("node-serialize");
   - import serialize from "node-serialize";
+---
+id: sec-deser-009-java-object-stream
+valid:
+  - 'User u = mapper.readValue(body, User.class);'
+invalid:
+  - 'ObjectInputStream in = new ObjectInputStream(request.getInputStream());'
+  - 'mapper.enableDefaultTyping();'
+---
+id: sec-deser-009-java-snakeyaml
+valid:
+  - 'Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));'
+invalid:
+  - 'Yaml yaml = new Yaml();'

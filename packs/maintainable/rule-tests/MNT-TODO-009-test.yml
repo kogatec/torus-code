@@ -15,3 +15,23 @@ valid:
 invalid:
   - '# TODO 返金の部分対応'
   - '# HACK: 一時的な回避策'
+---
+id: mnt-todo-009-rs-untracked-todo
+valid:
+  - '// TODO(PAY-42): 返金の部分対応。現状は全額返金のみ'
+  - '// 返金は全額のみ対応する'
+invalid:
+  - '// TODO 返金の部分対応'
+  - '/* FIXME: 丸めがずれる */'
+---
+id: mnt-todo-009-go-untracked-todo
+valid:
+  - '// TODO(PAY-42): 返金の部分対応。現状は全額返金のみ'
+invalid:
+  - '// TODO 返金の部分対応'
+---
+id: mnt-todo-009-java-untracked-todo
+valid:
+  - '// TODO #123 返金の部分対応'
+invalid:
+  - '// FIXME 丸めがずれる'

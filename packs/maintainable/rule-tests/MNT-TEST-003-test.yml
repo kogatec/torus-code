@@ -41,3 +41,67 @@ invalid:
   - |
     def test_adds_tax():
         with_tax(100)
+---
+id: mnt-test-003-rs-test-without-assertion
+valid:
+  - |
+    #[test]
+    fn adds_tax() {
+        assert_eq!(with_tax(100), 110);
+    }
+  - |
+    #[test]
+    #[should_panic(expected = "negative")]
+    fn rejects_negative() {
+        with_tax_checked(-1);
+    }
+  - |
+    #[tokio::test]
+    async fn fetches() {
+        let r = fetch().await;
+        assert!(r.is_ok());
+    }
+  - 'fn helper() { setup(); }'
+invalid:
+  - |
+    #[test]
+    fn adds_tax() {
+        with_tax(100);
+    }
+---
+id: mnt-test-003-go-test-without-assertion
+valid:
+  - |
+    func TestWithTax(t *testing.T) {
+    	if got := WithTax(100); got != 110 {
+    		t.Errorf("WithTax(100) = %d, want 110", got)
+    	}
+    }
+  - |
+    func TestWithTax(t *testing.T) {
+    	assert.Equal(t, 110, WithTax(100))
+    }
+invalid:
+  - |
+    func TestWithTax(t *testing.T) {
+    	WithTax(100)
+    }
+---
+id: mnt-test-003-java-test-without-assertion
+valid:
+  - |
+    class TaxTest {
+      @Test
+      void addsTax() { assertEquals(110, Tax.withTax(100)); }
+    }
+  - |
+    class TaxTest {
+      @Test(expected = IllegalArgumentException.class)
+      public void rejectsNegative() { Tax.withTax(-1); }
+    }
+invalid:
+  - |
+    class TaxTest {
+      @Test
+      void addsTax() { Tax.withTax(100); }
+    }

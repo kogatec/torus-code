@@ -46,6 +46,8 @@ export interface Pack {
   values: string[];
   suited_for: string[];
   tradeoffs: string[];
+  /** 検査できる言語（paths.ts の Language の名前）。JavaScript の検査は、ここに javascript があるときだけ有効にする */
+  languages: string[];
   exclude_paths: string[];
   principles: Principle[];
   rules: RuleDoc[];
@@ -153,6 +155,7 @@ export function loadPack(dir: string): Pack {
     values: asStringList(meta.values),
     suited_for: asStringList(meta.suited_for),
     tradeoffs: asStringList(meta.tradeoffs),
+    languages: asStringList(meta.languages),
     exclude_paths: asStringList(meta.exclude_paths),
     principles,
     rules,

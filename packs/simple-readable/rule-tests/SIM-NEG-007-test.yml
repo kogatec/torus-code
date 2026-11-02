@@ -17,3 +17,23 @@ invalid:
   - |
     def has_no_items(cart):
         return not cart.items
+---
+id: sim-neg-007-rs-negative-name
+valid:
+  - 'let is_ready = check();'
+invalid:
+  - 'let is_not_ready = check();'
+  - 'fn has_no_items(cart: &Cart) -> bool { cart.items.is_empty() }'
+---
+id: sim-neg-007-go-negative-name
+valid:
+  - 'func f() { isReady := check(); _ = isReady }'
+invalid:
+  - 'func f() { isNotReady := check(); _ = isNotReady }'
+  - 'func HasNoItems(c Cart) bool { return len(c.Items) == 0 }'
+---
+id: sim-neg-007-java-negative-name
+valid:
+  - 'boolean isReady = check();'
+invalid:
+  - 'boolean isNotReady = check();'

@@ -1,8 +1,23 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { test } from "node:test";
+import YAML from "yaml";
 import { readProfile, writeProfile } from "../src/core/profile.ts";
 import { compile, loadCompiled } from "../src/core/resolve.ts";
 import { setupProject } from "./helpers.ts";
+
+test("ast-grep の設定はファイルの言語ごとにも作り、その言語のルールだけを読み込む", () => {
+  const { compiled } = setupProject();
+  const read = (file: string | undefined) => YAML.parse(fs.readFileSync(file!, "utf8"));
+  assert.deepEqual(Object.keys(compiled.sgconfigs).sort(), ["go", "java", "javascript", "python", "rust", "typescript"]);
+  assert.deepEqual(read(compiled.sgconfigs.rust), { ruleDirs: ["rules/Rust"] });
+  assert.deepEqual(read(compiled.sgconfigs.typescript), { ruleDirs: ["rules/TypeScript", "rules/Tsx"] });
+  assert.deepEqual(read(compiled.sgconfigs.javascript), {
+    ruleDirs: ["rules/Tsx"],
+    languageGlobs: { tsx: ["*.js", "*.mjs", "*.cjs", "*.jsx"] },
+  });
+  assert.deepEqual(read(compiled.sgconfig).ruleDirs, ["rules"]);
+});
 
 test("必須の原則が先頭に並ぶ", () => {
   const { compiled } = setupProject();

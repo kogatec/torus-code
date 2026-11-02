@@ -34,3 +34,39 @@ rule:
         - kind: lambda
         - kind: if_statement
           has: { field: condition, regex: '__name__' }
+---
+id: mnt-side-012-go-init-io
+language: Go
+severity: info
+message: パッケージを読み込んだだけで（init や変数の初期化で）、通信やファイル操作が実行されます
+note: 関数に移し、main などの起動処理から明示的に呼んでください。読み込みだけで外部に触れると、テストや再利用が難しくなります。
+metadata: { principle: MNT-SIDE-012 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '^(http\.(Get|Post|Head|PostForm)|os\.(Open|OpenFile|Create|ReadFile|WriteFile|ReadDir|Remove|RemoveAll|Mkdir|MkdirAll)|ioutil\.\w+|sql\.Open|exec\.Command|net\.(Dial|Listen)|time\.Sleep)$' }
+  inside:
+    stopBy: end
+    any:
+      - kind: function_declaration
+        has: { field: name, regex: '^init$' }
+      - kind: var_declaration
+        inside: { kind: source_file }
+---
+id: mnt-side-012-java-static-io
+language: Java
+severity: info
+message: クラスを読み込んだだけで（static の初期化で）、通信やファイル操作が実行されます
+note: メソッドに移し、起動処理から明示的に呼んでください。読み込みだけで外部に触れると、テストや再利用が難しくなります。
+metadata: { principle: MNT-SIDE-012 }
+rule:
+  any:
+    - kind: object_creation_expression
+      has: { field: type, regex: '^(FileInputStream|FileOutputStream|FileReader|FileWriter|RandomAccessFile|Socket|ServerSocket)$' }
+    - kind: method_invocation
+      regex: '^(Files\.\w+|DriverManager\.getConnection|Thread\.sleep)\('
+  inside:
+    stopBy: end
+    any:
+      - kind: static_initializer
+      - kind: field_declaration
+        has: { kind: modifiers, regex: '\bstatic\b' }

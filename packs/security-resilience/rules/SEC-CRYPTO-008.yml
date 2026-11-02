@@ -101,3 +101,206 @@ rule:
       regex: '^verify\s*=\s*False$'
     - pattern: ssl._create_unverified_context($$$)
     - pattern: ssl.CERT_NONE
+---
+id: sec-crypto-008-rs-weak-rng-secret
+language: Rust
+severity: error
+message: 予測できる乱数（種を固定した乱数・暗号用ではない乱数）で、秘密の値（トークン・ID など）を作っています
+note: rand::rngs::OsRng か rand::thread_rng() を使い、種を固定しないでください。
+metadata: { principle: SEC-CRYPTO-008 }
+utils:
+  # 秘密の値らしい名前（reset や session だけでは、待ち時間の揺らぎなどと区別できないため、続く語で判定する）
+  secret-name:
+    regex: '(?i)(token|secret|nonce|salt|passw|api_?key|session_?(id|key|token)|csrf|invite|reset_?(token|code|key|link)|verification_?(code|token)|(^|_)otp|otp($|_))'
+rule:
+  kind: call_expression
+  has: { field: function, regex: 'seed_from_u64$|(^|::)(SmallRng|Pcg\w*|XorShiftRng|Xoshiro\w*)::\w+$|^fastrand::\w+$|^oorandom::' }
+  inside:
+    stopBy: end
+    any:
+      - kind: let_declaration
+        has: { field: pattern, matches: secret-name }
+      - kind: function_item
+        has: { field: name, matches: secret-name }
+---
+id: sec-crypto-008-rs-weak-hash
+language: Rust
+severity: warning
+message: MD5 / SHA-1 を使っています
+note: パスワードには argon2 / scrypt / bcrypt、改ざん検知には SHA-256 以上（sha2 クレート）か HMAC を使ってください。チェックサム用途なら、その旨をコメントに書いてください。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '(^|::)(md5::compute|(Md5|Sha1)::(new|digest|default|new_with_prefix))$|^sha1_smol::Sha1::\w+$' }
+---
+id: sec-crypto-008-rs-tls-off
+language: Rust
+severity: error
+message: TLS 証明書の検証を無効にしています
+note: 検証は有効のままにしてください。社内 CA なら add_root_certificate で証明書を追加してください。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  any:
+    - kind: call_expression
+      all:
+        - has: { field: function, regex: '\.danger_accept_invalid_(certs|hostnames)$' }
+        - has: { field: arguments, regex: '^\(\s*true\s*\)$' }
+    - kind: scoped_identifier
+      regex: '^(\w+::)*SslVerifyMode::NONE$'
+---
+id: sec-crypto-008-rs-weak-cipher
+language: Rust
+severity: error
+message: 安全でない暗号（ECB モード・DES・RC4）を使っています
+note: aes-gcm や chacha20poly1305 などの認証付き暗号を使い、nonce は毎回ランダムに作ってください。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '(^|::)ecb::(Encryptor|Decryptor)\b|(^|::)(Des|TdesEde2|TdesEde3|Rc4)::new\w*$' }
+---
+id: sec-crypto-008-go-math-rand-secret
+language: Go
+severity: error
+message: math/rand で秘密の値（トークン・ID など）を作っています
+note: crypto/rand の rand.Read か rand.Text（Go 1.24 以降）を使ってください。
+metadata: { principle: SEC-CRYPTO-008 }
+utils:
+  # 秘密の値らしい名前（reset や session だけでは、待ち時間の揺らぎなどと区別できないため、続く語で判定する）
+  secret-name:
+    regex: '(?i)(token|secret|nonce|salt|passw|api_?key|session_?(id|key|token)|csrf|invite|reset_?(token|code|key|link)|verification_?(code|token)|(^|_)otp|otp($|_))'
+rule:
+  kind: call_expression
+  has: { field: function, regex: '^rand\.\w+$' }
+  all:
+    - inside:
+        stopBy: end
+        any:
+          - any: [ { kind: function_declaration }, { kind: method_declaration } ]
+            has: { field: name, matches: secret-name }
+          - kind: short_var_declaration
+            has: { field: left, matches: secret-name }
+          - kind: var_spec
+            has: { field: name, matches: secret-name }
+    - inside:
+        stopBy: end
+        kind: source_file
+        has: { stopBy: end, kind: import_spec, regex: '^"math/rand(/v2)?"$' }
+---
+id: sec-crypto-008-go-weak-hash
+language: Go
+severity: warning
+message: MD5 / SHA-1 を使っています
+note: パスワードには argon2 / scrypt / bcrypt（golang.org/x/crypto）、改ざん検知には SHA-256 以上か HMAC を使ってください。チェックサム用途なら、その旨をコメントに書いてください。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '^(md5|sha1)\.(New|Sum)$' }
+---
+id: sec-crypto-008-go-tls-off
+language: Go
+severity: error
+message: TLS 証明書の検証を無効にしています（InsecureSkipVerify）
+note: 検証は有効のままにしてください。社内 CA なら tls.Config の RootCAs に証明書を追加してください。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  any:
+    - kind: keyed_element
+      regex: '^InsecureSkipVerify\s*:\s*true$'
+    - kind: assignment_statement
+      regex: '\.InsecureSkipVerify\s*=\s*true$'
+---
+id: sec-crypto-008-go-weak-cipher
+language: Go
+severity: error
+message: 安全でない暗号（DES・3DES・RC4）を使っています
+note: AES-GCM（crypto/cipher の NewGCM）や chacha20poly1305 などの認証付き暗号を使い、nonce は毎回ランダムに作ってください。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  kind: call_expression
+  has: { field: function, regex: '^(des\.(NewCipher|NewTripleDESCipher)|rc4\.NewCipher)$' }
+---
+id: sec-crypto-008-java-weak-random-secret
+language: Java
+severity: error
+message: java.util.Random などで秘密の値（トークン・ID など）を作っています
+note: java.security.SecureRandom を使ってください。
+metadata: { principle: SEC-CRYPTO-008 }
+utils:
+  # 秘密の値らしい名前（reset や session だけでは、待ち時間の揺らぎなどと区別できないため、続く語で判定する）
+  secret-name:
+    regex: '(?i)(token|secret|nonce|salt|passw|api_?key|session_?(id|key|token)|csrf|invite|reset_?(token|code|key|link)|verification_?(code|token)|(^|_)otp|otp($|_))'
+rule:
+  any:
+    - kind: object_creation_expression
+      has: { field: type, regex: '^Random$' }
+    - kind: method_invocation
+      regex: '^(Math\.random\(\)|ThreadLocalRandom\.current\(\))$|^RandomStringUtils\.random\w*\('
+  inside:
+    stopBy: end
+    any:
+      - kind: variable_declarator
+        has: { field: name, matches: secret-name }
+      - kind: method_declaration
+        has: { field: name, matches: secret-name }
+---
+id: sec-crypto-008-java-weak-hash
+language: Java
+severity: warning
+message: MD5 / SHA-1 を使っています
+note: パスワードには argon2 / scrypt / bcrypt（Spring Security の PasswordEncoder など）、改ざん検知には SHA-256 以上か HMAC を使ってください。チェックサム用途なら、その旨をコメントに書いてください。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  kind: method_invocation
+  any:
+    - all:
+        - has: { field: object, regex: '^MessageDigest$' }
+        - has: { field: name, regex: '^getInstance$' }
+        - has: { field: arguments, has: { nthChild: 1, kind: string_literal, regex: '(?i)^"(md2|md4|md5|sha-?1|sha)"$' } }
+    - all:
+        - has: { field: object, regex: '^DigestUtils$' }
+        - has: { field: name, regex: '^(md5|sha1|sha|md2)(Hex)?$' }
+    - all:
+        - has: { field: object, regex: '^Hashing$' }
+        - has: { field: name, regex: '^(md5|sha1)$' }
+---
+id: sec-crypto-008-java-weak-cipher
+language: Java
+severity: error
+message: 安全でない暗号の使い方（ECB モード・DES・RC4 など）です
+note: Cipher.getInstance("AES/GCM/NoPadding") を使い、IV は毎回 SecureRandom で作ってください。"AES" だけを指定すると ECB モードになります。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  kind: method_invocation
+  all:
+    - has: { field: object, regex: '^Cipher$' }
+    - has: { field: name, regex: '^getInstance$' }
+    - has:
+        field: arguments
+        has:
+          nthChild: 1
+          kind: string_literal
+          regex: '(?i)^"(aes|des|desede|rc2|rc4|arcfour|blowfish)"$|/ecb/|^"(des|desede|rc2|rc4|arcfour|blowfish)/'
+---
+id: sec-crypto-008-java-tls-off
+language: Java
+severity: error
+message: TLS 証明書・ホスト名の検証を無効にしています
+note: 検証は有効のままにしてください。社内 CA なら、その証明書を入れた TrustStore を使ってください。
+metadata: { principle: SEC-CRYPTO-008 }
+rule:
+  any:
+    - any: [ { kind: identifier }, { kind: type_identifier } ]
+      regex: '^(NoopHostnameVerifier|TrustAllStrategy|TrustSelfSignedStrategy|InsecureTrustManagerFactory|ALLOW_ALL_HOSTNAME_VERIFIER)$'
+      not: { inside: { kind: import_declaration, stopBy: end } }
+    - kind: method_declaration
+      all:
+        - has: { field: name, regex: '^check(Server|Client)Trusted$' }
+        - has: { field: body, regex: '^\{\s*\}$' }
+    - kind: lambda_expression
+      all:
+        - has: { field: body, regex: '^true$' }
+        - inside:
+            kind: argument_list
+            inside:
+              kind: method_invocation
+              has: { field: name, regex: '^(setHostnameVerifier|setDefaultHostnameVerifier|hostnameVerifier|setSSLHostnameVerifier)$' }

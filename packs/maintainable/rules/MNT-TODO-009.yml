@@ -21,3 +21,39 @@ rule:
   regex: '\b(TODO|FIXME|HACK|XXX)\b'
   not:
     regex: '\b(TODO|FIXME|HACK|XXX)\s*\([^)]+\)|#\d+|\b[A-Z][A-Z0-9]+-\d+\b|@\w+|https?://'
+---
+id: mnt-todo-009-rs-untracked-todo
+language: Rust
+severity: info
+message: 担当者や課題番号のない TODO / FIXME です
+note: 'TODO(担当者): や TODO #123 のように、誰が・どの課題で直すかを書いてください。追跡されない TODO は直されません。'
+metadata: { principle: MNT-TODO-009 }
+rule:
+  any: [ { kind: line_comment }, { kind: block_comment } ]
+  regex: '\b(TODO|FIXME|HACK|XXX)\b'
+  not:
+    regex: '\b(TODO|FIXME|HACK|XXX)\s*\([^)]+\)|#\d+|\b[A-Z][A-Z0-9]+-\d+\b|@\w+|https?://'
+---
+id: mnt-todo-009-go-untracked-todo
+language: Go
+severity: info
+message: 担当者や課題番号のない TODO / FIXME です
+note: 'TODO(担当者): や TODO #123 のように、誰が・どの課題で直すかを書いてください。追跡されない TODO は直されません。'
+metadata: { principle: MNT-TODO-009 }
+rule:
+  kind: comment
+  regex: '\b(TODO|FIXME|HACK|XXX)\b'
+  not:
+    regex: '\b(TODO|FIXME|HACK|XXX)\s*\([^)]+\)|#\d+|\b[A-Z][A-Z0-9]+-\d+\b|@\w+|https?://'
+---
+id: mnt-todo-009-java-untracked-todo
+language: Java
+severity: info
+message: 担当者や課題番号のない TODO / FIXME です
+note: 'TODO(担当者): や TODO #123 のように、誰が・どの課題で直すかを書いてください。追跡されない TODO は直されません。'
+metadata: { principle: MNT-TODO-009 }
+rule:
+  any: [ { kind: line_comment }, { kind: block_comment } ]
+  regex: '\b(TODO|FIXME|HACK|XXX)\b'
+  not:
+    regex: '\b(TODO|FIXME|HACK|XXX)\s*\([^)]+\)|#\d+|\b[A-Z][A-Z0-9]+-\d+\b|@\w+|https?://'

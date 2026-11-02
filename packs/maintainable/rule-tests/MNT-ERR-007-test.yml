@@ -38,3 +38,47 @@ valid:
   - raise OrderNotFound(order_id)
 invalid:
   - raise Exception("price must be positive")
+---
+id: mnt-err-007-rs-string-error
+valid:
+  - 'fn parse(input: &str) -> Result<Order, ParseError> { todo!() }'
+  - 'fn label(r: Result<u8, String>) -> String { todo!() }'
+invalid:
+  - 'fn parse(input: &str) -> Result<Order, String> { todo!() }'
+  - 'fn parse(input: &str) -> Result<Order, &''static str> { todo!() }'
+---
+id: mnt-err-007-rs-message-compare
+valid:
+  - 'if matches!(err, AppError::Timeout) { retry(); }'
+invalid:
+  - 'if err.to_string() == "timeout" { retry(); }'
+  - 'if e.to_string().contains("timeout") { retry(); }'
+---
+id: mnt-err-007-go-message-compare
+valid:
+  - 'func f(err error) bool { return errors.Is(err, context.DeadlineExceeded) }'
+invalid:
+  - 'func f(err error) bool { return err.Error() == "timeout" }'
+  - 'func f(err error) bool { return strings.Contains(err.Error(), "timeout") }'
+---
+id: mnt-err-007-go-sentinel-compare
+valid:
+  - 'func f(err error) bool { return errors.Is(err, sql.ErrNoRows) }'
+  - 'func f(err error) bool { return err != nil }'
+  - 'func f(err error) bool { return err == io.EOF }'
+invalid:
+  - 'func f(err error) bool { return err == sql.ErrNoRows }'
+  - 'func f(err error) bool { return err != ErrNotFound }'
+---
+id: mnt-err-007-java-message-compare
+valid:
+  - 'if (e instanceof TimeoutException) retry();'
+invalid:
+  - 'if (e.getMessage().contains("timeout")) retry();'
+  - 'if ("timeout".equals(e.getMessage())) retry();'
+---
+id: mnt-err-007-java-generic-exception
+valid:
+  - 'throw new IllegalArgumentException("price must be positive");'
+invalid:
+  - 'throw new RuntimeException("not found");'

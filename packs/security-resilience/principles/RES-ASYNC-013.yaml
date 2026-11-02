@@ -5,14 +5,14 @@ summary: Promise / Task は必ず待つか、失敗の処理を付ける
 level: default
 styles: { security_resilience: 0.8, maintainable: 0.6 }
 applies_when:
-  languages: [typescript, python]
+  languages: [typescript, javascript, python, rust, go, java]
   layers: [any]
 not_when: []
 rationale: >
   待たない Promise / Task の失敗は、誰にも処理されずに消えるか、プロセスを落とす。
   処理の順序も保証されず、再現しにくい不具合になる。
 checks:
-  static: [res-async-013-ts-then-without-catch, res-async-013-py-orphan-task]
+  static: [res-async-013-ts-then-without-catch, res-async-013-py-orphan-task, res-async-013-rs-detached-task, res-async-013-go-wg-add-in-goroutine, res-async-013-go-errgroup-without-wait, res-async-013-java-dropped-future]
   external:
     - engine: eslint
       rule: "@typescript-eslint/no-floating-promises"   # 型情報が必要。このパックでは未検証

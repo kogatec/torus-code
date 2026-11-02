@@ -38,3 +38,39 @@ invalid:
   - |
     if done != False:
         go()
+---
+id: sim-std-014-rs-index-loop
+valid:
+  - 'for item in &items { ship(item); }'
+invalid:
+  - 'for i in 0..items.len() { ship(&items[i]); }'
+---
+id: sim-std-014-rs-bool-compare
+valid:
+  - 'if is_ready { start(); }'
+invalid:
+  - 'if is_ready == true { start(); }'
+---
+id: sim-std-014-go-index-loop
+valid:
+  - 'func f() { for _, item := range items { ship(item) } }'
+invalid:
+  - 'func f() { for i := 0; i < len(items); i++ { ship(items[i]) } }'
+---
+id: sim-std-014-go-bool-compare
+valid:
+  - 'func f() { if isReady { start() } }'
+invalid:
+  - 'func f() { if isReady == true { start() } }'
+---
+id: sim-std-014-java-index-loop
+valid:
+  - 'for (Item item : items) { ship(item); }'
+invalid:
+  - 'for (int i = 0; i < items.size(); i++) { ship(items.get(i)); }'
+---
+id: sim-std-014-java-bool-compare
+valid:
+  - 'if (isReady) start();'
+invalid:
+  - 'if (isReady == true) start();'

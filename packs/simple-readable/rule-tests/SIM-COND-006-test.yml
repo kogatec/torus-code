@@ -15,3 +15,26 @@ invalid:
   - |
     if user and user.active and cart.items and not user.blocked:
         checkout()
+---
+id: sim-cond-006-rs-complex-condition
+valid:
+  - 'if user.active && !cart.items.is_empty() { checkout(); }'
+  - |
+    #[cfg(test)]
+    mod tests {
+        fn f() -> bool { a && b && c && d }
+    }
+invalid:
+  - 'if user.active && cart.items.len() > 0 && !user.blocked && user.verified { checkout(); }'
+---
+id: sim-cond-006-go-complex-condition
+valid:
+  - 'func f() { if user.Active && len(cart.Items) > 0 { checkout() } }'
+invalid:
+  - 'func f() { if user.Active && len(cart.Items) > 0 && !user.Blocked && user.Verified { checkout() } }'
+---
+id: sim-cond-006-java-complex-condition
+valid:
+  - 'if (user.isActive() && !cart.isEmpty()) checkout();'
+invalid:
+  - 'if (user != null && user.isActive() && !cart.isEmpty() && !user.isBlocked()) checkout();'

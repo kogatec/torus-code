@@ -50,3 +50,149 @@ invalid:
   - requests.get(url, verify=False, timeout=5)
   - ctx = ssl._create_unverified_context()
   - ctx.verify_mode = ssl.CERT_NONE
+---
+id: sec-crypto-008-rs-weak-rng-secret
+valid:
+  - |
+    fn reset_token() -> String {
+        let mut bytes = [0u8; 32];
+        OsRng.fill_bytes(&mut bytes);
+        hex::encode(bytes)
+    }
+  - 'let mut rng = StdRng::seed_from_u64(42);'
+  - |
+    fn reset_backoff() -> u64 {
+        let mut rng = SmallRng::from_entropy();
+        rng.gen_range(0..1000)
+    }
+invalid:
+  - |
+    fn reset_token() -> u64 {
+        let mut rng = StdRng::seed_from_u64(42);
+        rng.gen()
+    }
+  - 'let session_id = fastrand::u64(..);'
+---
+id: sec-crypto-008-rs-weak-hash
+valid:
+  - 'let digest = Sha256::digest(data);'
+invalid:
+  - 'let digest = md5::compute(data);'
+  - 'let mut hasher = Sha1::new();'
+---
+id: sec-crypto-008-rs-tls-off
+valid:
+  - 'let client = reqwest::Client::builder().add_root_certificate(cert).build()?;'
+invalid:
+  - 'let client = reqwest::Client::builder().danger_accept_invalid_certs(true).build()?;'
+  - 'builder.set_verify(SslVerifyMode::NONE);'
+---
+id: sec-crypto-008-rs-weak-cipher
+valid:
+  - 'let cipher = Aes256Gcm::new(&key);'
+invalid:
+  - 'let enc = ecb::Encryptor::<Aes128>::new(&key.into());'
+  - 'let cipher = Des::new_from_slice(&key)?;'
+---
+id: sec-crypto-008-go-math-rand-secret
+valid:
+  - |
+    package auth
+
+    import "crypto/rand"
+
+    func resetToken() []byte {
+    	b := make([]byte, 32)
+    	rand.Read(b)
+    	return b
+    }
+  - |
+    package game
+
+    import "math/rand"
+
+    func rollDice() int { return rand.Intn(6) + 1 }
+  - |
+    package retry
+
+    import "math/rand"
+
+    func (b *Backoff) Reset() time.Duration { return time.Duration(rand.Int63n(int64(b.max))) }
+invalid:
+  - |
+    package auth
+
+    import "math/rand"
+
+    func resetToken() string { return strconv.Itoa(rand.Int()) }
+  - |
+    package auth
+
+    import (
+    	"math/rand/v2"
+    )
+
+    func issue() {
+    	sessionID := rand.Uint64()
+    	_ = sessionID
+    }
+---
+id: sec-crypto-008-go-weak-hash
+valid:
+  - 'sum := sha256.Sum256(data)'
+invalid:
+  - 'sum := md5.Sum(data)'
+  - 'h := sha1.New()'
+---
+id: sec-crypto-008-go-tls-off
+valid:
+  - 'cfg := &tls.Config{MinVersion: tls.VersionTLS12}'
+invalid:
+  - 'cfg := &tls.Config{InsecureSkipVerify: true}'
+  - 'tr.TLSClientConfig.InsecureSkipVerify = true'
+---
+id: sec-crypto-008-go-weak-cipher
+valid:
+  - 'block, err := aes.NewCipher(key)'
+invalid:
+  - 'block, err := des.NewTripleDESCipher(key)'
+  - 'c, err := rc4.NewCipher(key)'
+---
+id: sec-crypto-008-java-weak-random-secret
+valid:
+  - 'String resetToken = new BigInteger(130, new SecureRandom()).toString(32);'
+  - 'int dice = new Random().nextInt(6);'
+  - |
+    class Backoff {
+      long resetDelay() { return new Random().nextInt(1000); }
+    }
+invalid:
+  - 'String resetToken = Long.toHexString(new Random().nextLong());'
+  - 'String sessionId = RandomStringUtils.randomAlphanumeric(32);'
+---
+id: sec-crypto-008-java-weak-hash
+valid:
+  - 'MessageDigest md = MessageDigest.getInstance("SHA-256");'
+invalid:
+  - 'MessageDigest md = MessageDigest.getInstance("MD5");'
+  - 'String h = DigestUtils.sha1Hex(data);'
+---
+id: sec-crypto-008-java-weak-cipher
+valid:
+  - 'Cipher c = Cipher.getInstance("AES/GCM/NoPadding");'
+invalid:
+  - 'Cipher c = Cipher.getInstance("AES");'
+  - 'Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");'
+  - 'Cipher c = Cipher.getInstance("DESede/CBC/PKCS5Padding");'
+---
+id: sec-crypto-008-java-tls-off
+valid:
+  - 'HttpClient client = HttpClient.newBuilder().sslContext(sslContext).build();'
+  - 'import org.apache.http.conn.ssl.NoopHostnameVerifier;'
+invalid:
+  - 'conn.setHostnameVerifier((hostname, session) -> true);'
+  - 'CloseableHttpClient c = HttpClients.custom().setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE).build();'
+  - |
+    class TrustAll implements X509TrustManager {
+      public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+    }

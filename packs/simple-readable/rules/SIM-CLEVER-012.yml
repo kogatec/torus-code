@@ -46,3 +46,15 @@ rule:
   has:
     kind: for_in_clause
     precedes: { kind: for_in_clause, stopBy: end }
+---
+id: sim-clever-012-java-nested-ternary
+language: Java
+severity: warning
+message: 三項演算子が入れ子になっています
+note: if 文か、早期リターンする小さなメソッドに書き直してください。
+metadata: { principle: SIM-CLEVER-012 }
+rule:
+  kind: ternary_expression
+  has: { kind: ternary_expression, stopBy: end }
+  not:
+    inside: { kind: ternary_expression, stopBy: end }
